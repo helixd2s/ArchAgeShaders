@@ -139,9 +139,12 @@ void main() {
 		//this is the scene color
 		gl_FragData[0] = texture(tex, texcoord.st) * color;
 
-        #ifdef TRANSLUCENT
-            gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
-        #endif
+        if (entity.x == 2.f) {
+            gl_FragData[0] = color * vec4(0.0f.xxx, 0.1f);
+        }
+
+        gl_FragData[0] *= texture(lightmap, lmcoord.xy);
+        gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
 
 		//write normals to a buffer to be reused later, doing *0.5+0.5 to them because they are in -1 to 1 range but buffers cant store negative values
 		gl_FragData[1] = vec4(normal*0.5+0.5, 1.0);
@@ -163,6 +166,7 @@ void main() {
         #else
             gl_FragData[0] = texture(tex, texcoord.st) * color;
         #endif
+        gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
 
         gl_FragData[1] = vec4(vec3(gl_FragCoord.z), 1.0);
         gl_FragDepth = 1.f;
@@ -176,13 +180,19 @@ void main() {
 
     #ifdef WEATHER
         gl_FragData[0] = texture(tex, texcoord.st) * texture(lightmap, lmcoord.st) * color;
+        gl_FragData[0] *= texture(lightmap, lmcoord.xy);
         gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
+        gl_FragData[1] = vec4(normal*0.5+0.5, 1.0);
+        gl_FragData[2] = vec4(lmcoord.xy, 0.0, 1.0);
         gl_FragDepth = gl_FragCoord.z;
     #endif
 
     #ifdef HAND
         gl_FragData[0] = texture(tex, texcoord.st) * texture(lightmap, lmcoord.st) * color;
+        gl_FragData[0] *= texture(lightmap, lmcoord.xy);
         gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
+        gl_FragData[1] = vec4(normal*0.5+0.5, 1.0);
+        gl_FragData[2] = vec4(lmcoord.xy, 0.0, 1.0);
         gl_FragDepth = gl_FragCoord.z;
     #endif
 

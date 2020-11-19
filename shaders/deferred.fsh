@@ -89,7 +89,7 @@ float getDiffuse(vec3 normal, vec3 lightvec) {
 void main() {
 	//sample necessary scene textures
 	vec3 sceneColor 	= texture(colortex0, texcoord, 0).rgb;
-		 sceneColor		= pow(sceneColor, vec3(2.2f.xxx)); 	//linearize scene color
+		 //sceneColor		= pow(sceneColor, vec3(2.2f.xxx)); 	//linearize scene color
 	vec3 sceneDepth 	= texture(depthtex0, texcoord, 0).xxx;
 	vec3 sceneNormal	= normalize(texture(colortex1, texcoord, 0).xyz*2.0-1.0); 	//get the normals from the buffer we wrote them to
 	vec2 sceneLightmap 	= texture(colortex2, texcoord, 0).xy; 	//Get the lightmap from the buffer we previously wrote it to in gbuffers
@@ -118,7 +118,7 @@ void main() {
 		vec3 lightcolor 	= sunlightColor*shadow + skylightColor*sceneLightmap.y;	//apply sunlight and skylight color based on lighting
 			lightcolor 	    = max(lightcolor, torchlightColor*sceneLightmap.x);
 
-		sceneColor 		   *= lightcolor; 		//apply lighting to diffuse
+		sceneColor 		   *= clamp(lightcolor, 0.f.xxx, 1.f.xxx); 		//apply lighting to diffuse
 	}*/
 
 	//write to framebuffer attachment
