@@ -7,6 +7,7 @@ layout (location = 2) out vec4 lmcoord;
 layout (location = 3) out vec3 normal;
 layout (location = 4) out vec4 position;
 layout (location = 5) flat out vec4 entity;
+layout (location = 6) out vec4 tangent;
 //layout (location = 6) out vec4 vnormal;
 #endif
 
@@ -18,6 +19,7 @@ layout (location = 2) in vec4 lmcoord;
 layout (location = 3) in vec3 normal;
 layout (location = 4) in vec4 position;
 layout (location = 5) flat in vec4 entity;
+layout (location = 6) in vec4 tangent;
 //layout (location = 6) in vec4 vnormal;
 #endif
 
@@ -44,6 +46,7 @@ const int countInstances = 2;
 // 
 #ifdef VERTEX_SHADER
 attribute vec4 mc_Entity;
+attribute vec4 at_tangent;
 #endif
 
 //we use this for all solid objects because they get rendered the same way anyways
@@ -96,6 +99,7 @@ void main() {
         vnormal.y *= -1.f;
     };
 	normal = (gbufferModelView * vnormal).xyz;
+    tangent = ( vec4(at_tangent.xyz, 0.f));
 
     entity = mc_Entity;
 
@@ -154,6 +158,7 @@ void main() {
 		gl_FragDepth = gl_FragCoord.z;
 
         gl_FragData[3] = vec4(0.f.xxx, 1.f);
+        gl_FragData[4] = vec4(tangent.xyz * 0.5f + 0.5f, 1.f);
         if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.999f) {
             gl_FragData[7] = vec4(position.xyz, 1.0f);
             gl_FragData[3] = vec4(1.f.xxx, 1.f);

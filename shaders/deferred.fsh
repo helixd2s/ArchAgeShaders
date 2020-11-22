@@ -37,6 +37,7 @@ layout (location = 4) in vec3 torchlightColor;
 uniform vec3 cameraPosition;
 
 //uniforms (projection matrices)
+uniform mat4 gbufferProjection;
 uniform mat4 gbufferProjectionInverse;
 uniform mat4 gbufferModelView;
 uniform mat4 gbufferModelViewInverse;

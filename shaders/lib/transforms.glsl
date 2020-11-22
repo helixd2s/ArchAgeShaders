@@ -29,3 +29,26 @@ vec3 toScreenpos(vec3 worldpos) {
     vec3 posCamSpace    = viewMAD(gbufferModelView, posWorldSpace);
     return posCamSpace;
 }
+
+
+
+vec4 ScreenSpaceToCameraSpace(in vec4 screenSpace){
+    const vec4 cameraSpaceProj = gbufferProjectionInverse * screenSpace;
+    return cameraSpaceProj/cameraSpaceProj.w;
+}
+
+vec4 CameraSpaceToScreenSpace(in vec4 cameraSpace){
+    const vec4 screenSpaceProj = gbufferProjection * cameraSpace;
+    return screenSpaceProj/screenSpaceProj.w;
+}
+
+vec4 CameraSpaceToModelSpace(in vec4 cameraSpace){
+    vec4 modelSpaceProj = gbufferModelViewInverse*cameraSpace;
+    modelSpaceProj /= modelSpaceProj.w, modelSpaceProj.xyz *= 0.5f;
+    return modelSpaceProj/modelSpaceProj.w;
+}
+
+vec4 ModelSpaceToCameraSpace(in vec4 modelSpace){
+    vec4 cameraSpaceProj = gbufferModelView*vec4(modelSpace.xyz*2.f,modelSpace.w);
+    return cameraSpaceProj/cameraSpaceProj.w;
+}
