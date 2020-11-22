@@ -8,6 +8,6 @@ void main() {
 	vec2 texcoord = vtexcoord;
 
 	vec3 sceneColor 	= texture(colortex0, texcoord, 0).rgb;
-
+	sceneColor.xyz 		= pow(sceneColor.xyz, vec3(1.0f/2.2f));
 	gl_FragColor		= vec4(sceneColor, 1.0);
 }

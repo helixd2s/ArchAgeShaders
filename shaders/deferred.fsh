@@ -45,6 +45,9 @@ uniform mat4 shadowProjection;
 uniform mat4 shadowProjectionInverse;
 uniform mat4 shadowModelView;
 
+//
+uniform vec3 skyColor;
+
 //include position transform files
 #include "/lib/transforms.glsl"
 #include "/lib/shadowmap.glsl"
@@ -90,7 +93,6 @@ float getDiffuse(vec3 normal, vec3 lightvec) {
 void main() {
 	//sample necessary scene textures
 	vec3 sceneColor 	= texture(colortex0, texcoord, 0).rgb;
-		 //sceneColor		= pow(sceneColor, vec3(2.2f.xxx)); 	//linearize scene color
 	vec3 sceneDepth 	= texture(depthtex0, texcoord, 0).xxx;
 	vec3 sceneNormal	= normalize(texture(colortex1, texcoord, 0).xyz*2.0-1.0); 	//get the normals from the buffer we wrote them to
 	vec2 sceneLightmap 	= texture(colortex2, texcoord, 0).xy; 	//Get the lightmap from the buffer we previously wrote it to in gbuffers
@@ -121,6 +123,11 @@ void main() {
 
 		sceneColor 		   *= clamp(lightcolor, 0.f.xxx, 1.f.xxx); 		//apply lighting to diffuse
 	}*/
+
+	if (texcoord.y > 0.5f) {
+		sceneColor.rgb = mix(pow(skyColor.xyz, vec3(2.2f)), sceneColor.rgb, texture(colortex0, texcoord, 0).a);
+	}
+	 
 
 	//write to framebuffer attachment
 	/*DRAWBUFFERS:0*/

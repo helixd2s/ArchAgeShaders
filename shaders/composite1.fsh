@@ -43,6 +43,15 @@ uniform mat4 shadowModelView;
     const int colortex6Format = RGBA32F;
     const int colortex7Format = RGBA32F;
 
+    const vec4 colortex0ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex1ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex2ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex3ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex4ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex5ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex6ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex7ClearColor = vec4(0.f,0.f,0.f,0.f);
+
     const bool colortex7Clear = false;
 */
 
@@ -69,7 +78,6 @@ void main() {
     float reflcoef  = 1.f - abs(dot(normalize(screenpos), normal));
 
 	vec3 sceneColor = texelFetch(colortex0, texcoord, 0).rgb;
-		 sceneColor = pow(sceneColor, vec3(1.0/2.2));	//convert color back to display gamma
 
     float filterRefl = texelFetch(colortex3, texcoord, 0).r;
     if (filterRefl > 0.999f) {
@@ -85,7 +93,6 @@ void main() {
 
     rtexcoord = ivec2(sslrpos.xy * vec2(viewWidth, viewHeight));
 	vec3 reflColor 	= texelFetch(colortex0, rtexcoord.xy, 0).rgb;
-		 reflColor 	= pow(reflColor, vec3(1.0/2.2));	//convert color back to display gamma
 
     if (any(lessThan(sslrpos.xy,vec2(0.f.x,0.5f))) || any(greaterThanEqual(sslrpos.xy, vec2(0.5f, 1.f)))) {
         reflColor = vec3(0.f);

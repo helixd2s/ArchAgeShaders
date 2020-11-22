@@ -1,7 +1,8 @@
 //screen-/viewspace position
 vec3 getScreenpos(float depth, vec2 coord) {
     coord = fract(coord*2.f);
-    vec4 posNDC = vec4(coord.x*2.0-1.0, coord.y*2.0-1.0, 2.0*depth-1.0, 1.0);
+    //vec4 posNDC = vec4(coord.x*2.0-1.0, coord.y*2.0-1.0, 2.0*depth-1.0, 1.0);
+    vec4 posNDC = vec4(coord.x*2.0-1.0, coord.y*2.0-1.0, depth, 1.0);
          posNDC = gbufferProjectionInverse*posNDC;
     return posNDC.xyz/posNDC.w;
 }

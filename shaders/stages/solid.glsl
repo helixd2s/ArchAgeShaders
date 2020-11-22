@@ -66,6 +66,15 @@ uniform sampler2D gaux4;
     const int colortex6Format = RGBA32F;
     const int colortex7Format = RGBA32F;
 
+    const vec4 colortex0ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex1ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex2ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex3ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex4ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex5ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex6ClearColor = vec4(0.f,0.f,0.f,0.f);
+    const vec4 colortex7ClearColor = vec4(0.f,0.f,0.f,0.f);
+
     const bool colortex7Clear = false;
 */
 
@@ -148,7 +157,6 @@ void main() {
         }
 
         gl_FragData[0] *= texture(lightmap, lmcoord.xy);
-        gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
 
 		//write normals to a buffer to be reused later, doing *0.5+0.5 to them because they are in -1 to 1 range but buffers cant store negative values
 		gl_FragData[1] = vec4(normal*0.5+0.5, 1.0);
@@ -171,9 +179,8 @@ void main() {
         #else
             gl_FragData[0] = texture(tex, texcoord.st) * color;
         #endif
-        gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
 
-        gl_FragData[1] = vec4(vec3(gl_FragCoord.z), 1.0);
+        gl_FragData[1] = vec4(vec3(0.f,0.f,1.f), 1.0);
         gl_FragDepth = 1.f;
 
         if (fogMode == GL_EXP) {
@@ -186,7 +193,6 @@ void main() {
     #ifdef WEATHER
         gl_FragData[0] = texture(tex, texcoord.st) * texture(lightmap, lmcoord.st) * color;
         gl_FragData[0] *= texture(lightmap, lmcoord.xy);
-        gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
         gl_FragData[1] = vec4(normal*0.5+0.5, 1.0);
         gl_FragData[2] = vec4(lmcoord.xy, 0.0, 1.0);
         gl_FragDepth = gl_FragCoord.z;
@@ -195,7 +201,6 @@ void main() {
     #ifdef HAND
         gl_FragData[0] = texture(tex, texcoord.st) * texture(lightmap, lmcoord.st) * color;
         gl_FragData[0] *= texture(lightmap, lmcoord.xy);
-        gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
         gl_FragData[1] = vec4(normal*0.5+0.5, 1.0);
         gl_FragData[2] = vec4(lmcoord.xy, 0.0, 1.0);
         gl_FragDepth = gl_FragCoord.z;
@@ -230,6 +235,11 @@ void main() {
         gl_FragData[7] = vec4(0.f.xxxx);
 		gl_FragDepth = 2.f;
 	};
+
+    // 
+    gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
 #endif
+
+
 }
 
