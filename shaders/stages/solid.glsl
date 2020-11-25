@@ -145,7 +145,12 @@ void main() {
     gl_FragDepth = 2.f;
 
     const float height = texture(gaux4, vec2(0.25f, 0.25f)).y;
-	if (coordf.x >= 0.f && coordf.y >= 0.f && coordf.x < 1.f && coordf.y < 1.f && (instanceId == 0 || position.y < height - 0.001f) && normalCorrect) {
+#ifndef SKY
+	if (coordf.x >= 0.f && coordf.y >= 0.f && coordf.x < 1.f && coordf.y < 1.f && (instanceId == 0 || position.y < height - 0.001f) && normalCorrect) 
+#else
+    if (coordf.x >= 0.f && coordf.y >= 0.f && coordf.x < 1.f && coordf.y < 1.f) 
+#endif
+    {
         gl_FragDepth = gl_FragCoord.z;
 
     #ifdef SOLID
