@@ -1,8 +1,8 @@
 #version 460 compatibility
 
-#define VERTEX_SHADER
+#define FRAGMENT_SHADER
 #define TEXTURED 
 #define SOLID 
-#define EARLY_FRAG_TEST
+#define CUTOUT
 
 #include "stages/solid.glsl"

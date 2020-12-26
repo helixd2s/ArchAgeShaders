@@ -3,6 +3,6 @@
 #define VERTEX_SHADER
 #define TEXTURED 
 #define SOLID 
-#define EARLY_FRAG_TEST
+#define CUTOUT
 
 #include "stages/solid.glsl"
