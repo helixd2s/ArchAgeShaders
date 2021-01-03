@@ -8,6 +8,7 @@ layout (location = 3) out vec3 normal;
 layout (location = 4) out vec4 position;
 layout (location = 5) flat out vec4 entity;
 layout (location = 6) out vec4 tangent;
+layout (location = 7) out vec4 planar;
 //layout (location = 6) out vec4 vnormal;
 #endif
 
@@ -20,6 +21,7 @@ layout (location = 3) in vec3 normal;
 layout (location = 4) in vec4 position;
 layout (location = 5) flat in vec4 entity;
 layout (location = 6) in vec4 tangent;
+layout (location = 7) in vec4 planar;
 //layout (location = 6) in vec4 vnormal;
 #endif
 
@@ -89,19 +91,21 @@ void main() {
 #ifdef VERTEX_SHADER
 	texcoord = gl_TextureMatrix[0] * gl_MultiTexCoord0;
 	
-	position = gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex;
-    position.xyz += cameraPosition;
+	planar = gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex;
+    planar.xyz += cameraPosition;
 
     // planar reflected
     const float height = texture(gaux4, vec2(0.25f, 0.25f)).y;
     if (instanceId == 1) {
-        position.y -= height;
-        position.y *= -1.f;
-        position.y += height;
+        planar.y -= height;
+        planar.y *= -1.f;
+        planar.y += height;
     };
 
-	gl_Position = gl_ProjectionMatrix * (gbufferModelView * (position - vec4(cameraPosition, 0.f)));
-	
+	gl_Position = gl_ProjectionMatrix * (gbufferModelView * (planar - vec4(cameraPosition, 0.f)));
+
+    position = gl_Position / gl_Position.w;
+
 	color = gl_Color;
 	
 	lmcoord = gl_TextureMatrix[1] * gl_MultiTexCoord1;
@@ -151,7 +155,7 @@ void main() {
 
     const float height = texture(gaux4, vec2(0.25f, 0.25f)).y;
 #ifndef SKY
-	if (coordf.x >= 0.f && coordf.y >= 0.f && coordf.x < 1.f && coordf.y < 1.f && (instanceId == 0 || position.y < height - 0.001f) && normalCorrect) 
+	if (coordf.x >= 0.f && coordf.y >= 0.f && coordf.x < 1.f && coordf.y < 1.f && (instanceId == 0 || planar.y < height - 0.001f) && normalCorrect) 
 #else
     if (coordf.x >= 0.f && coordf.y >= 0.f && coordf.x < 1.f && coordf.y < 1.f) 
 #endif
@@ -178,7 +182,7 @@ void main() {
         gl_FragData[3] = vec4(0.f.xxx, 1.f);
         gl_FragData[4] = vec4(tangent.xyz * 0.5f + 0.5f, 1.f);
         if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.999f) {
-            gl_FragData[7] = vec4(position.xyz, 1.0f);
+            gl_FragData[7] = vec4(planar.xyz, 1.0f);
             gl_FragData[3] = vec4(1.f.xxx, 1.f);
         }
     #endif
