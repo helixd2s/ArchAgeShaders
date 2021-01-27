@@ -251,7 +251,7 @@ void main() {
 	};
 
     // 
-    gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
+    //gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
 #endif
 
 

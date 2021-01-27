@@ -125,7 +125,7 @@ void main() {
 	}*/
 
 	if (texcoord.y > 0.5f) {
-		sceneColor.rgb = mix(pow(skyColor.xyz, vec3(2.2f)), sceneColor.rgb, texture(colortex0, texcoord, 0).a);
+		sceneColor.rgb = mix(pow(skyColor.xyz, /*vec3(2.2f)*/1.f.xxx), sceneColor.rgb, texture(colortex0, texcoord, 0).a);
 	}
 	 
 
