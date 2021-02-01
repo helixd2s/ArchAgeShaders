@@ -1,20 +1,20 @@
 #version 460 compatibility
 #extension GL_NV_gpu_shader5 : enable
 
-uniform sampler2DArray depthtex0;
-uniform sampler2DArray colortex0;
-uniform sampler2DArray colortex1;
-uniform sampler2DArray colortex2;
-uniform sampler2DArray colortex3;
-uniform sampler2DArray colortex4;
-uniform sampler2DArray colortex5;
-uniform sampler2DArray colortex6;
-uniform sampler2DArray colortex7;
+#include "/lib/common.glsl"
+
+uniform samplerTyped depthtex0;
+uniform samplerTyped colortex0;
+uniform samplerTyped colortex1;
+uniform samplerTyped colortex2;
+uniform samplerTyped colortex3;
+uniform samplerTyped colortex4;
+uniform samplerTyped colortex5;
+uniform samplerTyped colortex6;
+uniform samplerTyped colortex7;
 
 layout (location = 0) in vec2 vtexcoord;
 layout (location = 1) in flat int layerId;
-
-#include "/lib/common.glsl"
 
 /*DRAWBUFFERS:01234567*/
 

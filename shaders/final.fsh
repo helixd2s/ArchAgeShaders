@@ -2,8 +2,8 @@
 
 #include "/lib/common.glsl"
 
-uniform sampler2DArray colortex0;
-uniform sampler2DArray colortex1;
+uniform samplerTyped colortex0;
+uniform samplerTyped colortex1;
 
 layout (location = 0) in vec2 vtexcoord;
 

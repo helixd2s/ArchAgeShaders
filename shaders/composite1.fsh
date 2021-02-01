@@ -1,16 +1,10 @@
 #version 460 compatibility
 #extension GL_NV_gpu_shader5 : enable
 
-uniform sampler2DArray depthtex0;
-uniform sampler2DArray colortex0;
-uniform sampler2DArray colortex1;
-uniform sampler2DArray colortex4;
+
 
 layout (location = 0) in vec2 vtexcoord;
 layout (location = 1) in flat int layerId;
-
-uniform sampler2DArray colortex7;
-uniform sampler2DArray colortex3;
 
 uniform float viewWidth;
 uniform float viewHeight;
@@ -28,6 +22,15 @@ uniform mat4 shadowProjectionInverse;
 uniform mat4 shadowModelView;
 
 #include "/lib/common.glsl"
+
+uniform samplerTyped depthtex0;
+uniform samplerTyped colortex0;
+uniform samplerTyped colortex1;
+uniform samplerTyped colortex4;
+uniform samplerTyped colortex7;
+uniform samplerTyped colortex3;
+
+
 #include "/lib/math.glsl"
 #include "/lib/transforms.glsl"
 #include "/lib/shadowmap.glsl"
@@ -85,10 +88,10 @@ void main() {
             normal = mat3(tangent, bitangent, normal) * ntexture;
         }
 
-        vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)));
-        rtexcoord = ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight));
+        //vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)));
+        //rtexcoord = ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight));
         vec3 reflColor = fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).rgb;
-        if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || all(equal(sslrpos.xyz, 0.f.xxx))) { reflColor = skyColor; };
+        if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f) { reflColor = skyColor; };
 
         gl_FragData[0] = vec4(mix(sceneColor, reflColor, filterRefl > 0.999f ? (0.1f + reflcoef*vec3(0.4f.xxx)) : vec3(0.f.xxx)), 1.0);
         gl_FragData[7] = sampleLayer(colortex7, vtexcoord, DEFAULT_SCENE);

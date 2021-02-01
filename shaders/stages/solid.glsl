@@ -39,7 +39,7 @@ uniform int fogMode;
 // 
 const int GL_LINEAR = 9729;
 const int GL_EXP = 2048;
-const int countInstances = 2;
+const int countInstances = 1;
 
 // 
 #ifdef VERTEX_SHADER
@@ -51,8 +51,6 @@ attribute vec4 at_tangent;
 //redundant code can be handled like this as an include to make your life easier
 uniform sampler2D tex; 		//this is our albedo texture. optifine's "default" name for this is "texture" but that collides with the texture() function of newer OpenGL versions. We use "tex" or "gcolor" instead, although it is just falling back onto the same sampler as an undefined behavior
 uniform sampler2D lightmap;	//the vanilla lightmap texture, basically useless with shaders
-
-uniform sampler2DArray gaux4;
 
 /*
     const int colortex0Format = RGBA32F;
@@ -83,6 +81,11 @@ uniform sampler2DArray gaux4;
 //layout(early_fragment_tests) in;
 #endif
 
+// 
+#include "../lib/common.glsl"
+
+uniform samplerTyped gaux4;
+
 void main() {
 #ifdef VERTEX_SHADER
 	texcoord = gl_TextureMatrix[0] * gl_MultiTexCoord0;
@@ -90,11 +93,15 @@ void main() {
     planar.xyz += cameraPosition;
 
     // planar reflected
-    const float height = texture(gaux4, vec3(0.5f, 0.5f, 0.f)).y;
+    const float height = sampleLayer(gaux4, vec2(0.5f, 0.5f), DEFAULT_SCENE).y;
     if (instanceId == 1) {
+#ifdef SKY
+        planar.y *= -1.f;
+#else
         planar.y -= height;
         planar.y *= -1.f;
         planar.y += height;
+#endif
     };
 
     // 
@@ -110,7 +117,7 @@ void main() {
     if (instanceId == 1) {
         vnormal.y *= -1.f;
     };
-    
+
     // 
 	normal = (gbufferModelView * vnormal).xyz;
     entity = mc_Entity;
@@ -133,7 +140,7 @@ void main() {
     #endif
 
     // 
-    const float height = texture(gaux4, vec3(0.5f, 0.5f, 0.f)).y;
+    const float height = sampleLayer(gaux4, vec2(0.5f, 0.5f), DEFAULT_SCENE).y;
 
     // 
     vec4 f_color = vec4(0.f.xxxx);
@@ -190,7 +197,7 @@ void main() {
     #ifdef OTHER
         f_lightmap = vec4(vec3(gl_FragCoord.z), 1.0f);
     #endif
-    
+
     #if defined(OTHER) || defined(SKY)
         if (fogMode == GL_EXP   ) { f_color.rgb = mix(f_color.rgb, gl_Fog.color.rgb, 1.0 - clamp(exp(-gl_Fog.density * gl_FogFragCoord), 0.0, 1.0)); } else 
         if (fogMode == GL_LINEAR) { f_color.rgb = mix(f_color.rgb, gl_Fog.color.rgb, clamp((gl_FogFragCoord - gl_Fog.start) * gl_Fog.scale, 0.0, 1.0)); };
