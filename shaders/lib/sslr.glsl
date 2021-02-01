@@ -4,18 +4,17 @@ vec4 GetColorSSR(){
 }
 
 float GetDepthSSR(in vec2 screenSpaceCoord) {
-    const vec2 txy = (screenSpaceCoord*0.5f+0.5f)*vec2(0.5f,0.5f)+vec2(0.f,0.5f); // normalize screen space coordinates
-    const vec4 txl = textureGather(depthtex0,txy,0);
-    const vec2 ttf = fract(txy*textureSize(depthtex0,0)-0.5f);
+    const vec2 txy = (screenSpaceCoord*0.5f+0.5f); // normalize screen space coordinates
+    const vec4 txl = gatherLayer(depthtex0,txy,REFLECTION_SCENE,0);
+    const vec2 ttf = fract(txy*textureSize(depthtex0,0).xy-0.5f);
     const vec2 px = vec2(1.f-ttf.x,ttf.x), py = vec2(1.f-ttf.y,ttf.y);
     const mat2x2 i2 = outerProduct(px,py);
     return dot(txl,vec4(i2[0],i2[1]).zwyx); // interpolate
 }
 
-vec3 GetNormalSSR(in vec2 screenSpaceCoord){
-    const vec2 txy = (screenSpaceCoord*0.5f+0.5f)*vec2(0.5f,0.5f)+vec2(0.f,0.5f); // normalize screen space coordinates
-    //const mat2x3 colp = unpack3x2(texelFetch(colortex1,ivec2(txy.xy*textureSize(colortex1,0)),0).xyz);
-    const vec3 colp = texelFetch(colortex1,ivec2(txy.xy*textureSize(colortex1,0)),0).xyz;
+vec3 GetNormalSSR(in vec2 screenSpaceCoord) {
+    const vec2 txy = (screenSpaceCoord*0.5f+0.5f);
+    const vec3 colp = fetchLayer(colortex1, ivec2(txy.xy*textureSize(colortex1,0).xy), REFLECTION_SCENE).xyz;
     return normalize(colp*2.f-1.f);
 }
 
@@ -25,13 +24,14 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection){
     WSR.y *= -1.f;
     cameraSpaceDirection = (gbufferModelView * WSR).xyz;
     
+    // 
     vec4 screenSpaceOrigin = CameraSpaceToScreenSpace(vec4(cameraSpaceOrigin,1.f));
     vec4 screenSpaceOriginNext = CameraSpaceToScreenSpace(vec4(cameraSpaceOrigin+cameraSpaceDirection,1.f));
     vec4 screenSpaceDirection = vec4(normalize(screenSpaceOriginNext.xyz-screenSpaceOrigin.xyz),0.f);
     screenSpaceDirection.xyz = normalize(screenSpaceDirection.xyz);
 
     // 
-    const vec2 screenSpaceDirSize = abs(screenSpaceDirection.xy*vec2(viewWidth*0.5f,viewHeight*0.5f));
+    const vec2 screenSpaceDirSize = abs(screenSpaceDirection.xy);
     screenSpaceDirection.xyz /= max(screenSpaceDirSize.x,screenSpaceDirSize.y)*(1.f/16.f); // half of image size
 
     // 

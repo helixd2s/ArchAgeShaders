@@ -1,9 +1,7 @@
 #version 460 compatibility
 
 #define GEOMETRY_SHADER
-#define TEXTURED 
-#define SOLID 
-#define EARLY_FRAG_TEST
+#define BASIC 
+#define SKY 
 
 #include "stages/culling.glsl"
-

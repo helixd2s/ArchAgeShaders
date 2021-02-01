@@ -1,9 +1,6 @@
 #version 460 compatibility
 
 #define GEOMETRY_SHADER
-#define TEXTURED 
-#define SOLID 
-#define EARLY_FRAG_TEST
+#define HAND
 
 #include "stages/culling.glsl"
-

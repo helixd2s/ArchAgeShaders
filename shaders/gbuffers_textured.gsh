@@ -2,8 +2,7 @@
 
 #define GEOMETRY_SHADER
 #define TEXTURED 
-#define SOLID 
-#define EARLY_FRAG_TEST
+#define OTHER 
 
 #include "stages/culling.glsl"
 

@@ -5,11 +5,9 @@ layout (location = 0) out vec4 color;
 layout (location = 1) out vec4 texcoord;
 layout (location = 2) out vec4 lmcoord;
 layout (location = 3) out vec3 normal;
-layout (location = 4) out vec4 position;
-layout (location = 5) flat out vec4 entity;
-layout (location = 6) out vec4 tangent;
-layout (location = 7) out vec4 planar;
-//layout (location = 6) out vec4 vnormal;
+layout (location = 4) out vec4 tangent;
+layout (location = 5) out vec4 planar;
+layout (location = 6) flat out vec4 entity;
 #endif
 
 //these are our inputs from the vertex shader
@@ -18,11 +16,9 @@ layout (location = 0) in vec4 color;
 layout (location = 1) in vec4 texcoord;
 layout (location = 2) in vec4 lmcoord;
 layout (location = 3) in vec3 normal;
-layout (location = 4) in vec4 position;
-layout (location = 5) flat in vec4 entity;
-layout (location = 6) in vec4 tangent;
-layout (location = 7) in vec4 planar;
-//layout (location = 6) in vec4 vnormal;
+layout (location = 4) in vec4 tangent;
+layout (location = 5) in vec4 planar;
+layout (location = 6) flat in vec4 entity;
 #endif
 
 //
@@ -56,7 +52,7 @@ attribute vec4 at_tangent;
 uniform sampler2D tex; 		//this is our albedo texture. optifine's "default" name for this is "texture" but that collides with the texture() function of newer OpenGL versions. We use "tex" or "gcolor" instead, although it is just falling back onto the same sampler as an undefined behavior
 uniform sampler2D lightmap;	//the vanilla lightmap texture, basically useless with shaders
 
-uniform sampler2D gaux4;
+uniform sampler2DArray gaux4;
 
 /*
     const int colortex0Format = RGBA32F;
@@ -90,168 +86,136 @@ uniform sampler2D gaux4;
 void main() {
 #ifdef VERTEX_SHADER
 	texcoord = gl_TextureMatrix[0] * gl_MultiTexCoord0;
-	
 	planar = gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex;
     planar.xyz += cameraPosition;
 
     // planar reflected
-    const float height = texture(gaux4, vec2(0.25f, 0.25f)).y;
+    const float height = texture(gaux4, vec3(0.5f, 0.5f, 0.f)).y;
     if (instanceId == 1) {
         planar.y -= height;
         planar.y *= -1.f;
         planar.y += height;
     };
 
+    // 
 	gl_Position = gl_ProjectionMatrix * (gbufferModelView * (planar - vec4(cameraPosition, 0.f)));
+    gl_FogFragCoord = gl_Position.z;
 
-    position = gl_Position / gl_Position.w;
-
+    // 
+    lmcoord = gl_TextureMatrix[1] * gl_MultiTexCoord1;
 	color = gl_Color;
-	
-	lmcoord = gl_TextureMatrix[1] * gl_MultiTexCoord1;
-	
-	gl_FogFragCoord = gl_Position.z;
 
+    // 
     vec4 vnormal = gbufferModelViewInverse * vec4(normalize(gl_NormalMatrix*gl_Normal), 0.f);
     if (instanceId == 1) {
         vnormal.y *= -1.f;
     };
+    
+    // 
 	normal = (gbufferModelView * vnormal).xyz;
-    tangent = ( vec4(at_tangent.xyz, 0.f));
-
     entity = mc_Entity;
-
-	#include "./vertexMod.glsl"
+    tangent = ( vec4(at_tangent.xyz, 0.f));
 #endif
 
 #ifdef FRAGMENT_SHADER
 	// sado guru algorithm
-	vec2 coordf = gl_FragCoord.xy * 2.f;// * gl_FragCoord.w;
+	vec2 coordf = gl_FragCoord.xy;// * gl_FragCoord.w;
 	coordf.xy /= vec2(viewWidth, viewHeight);
-	if (instanceId == 1) { coordf.y -= 1.f; };
 
     // 
     vec4 viewpos = gbufferProjectionInverse * vec4(coordf * 2.f - 1.f, gl_FragCoord.z, 1.f); viewpos /= viewpos.w;
     vec3 worldview = normalize(viewpos.xyz);
-    //vec4 worldpos = gbufferModelViewInverse * viewpos;
-    //vec3 worldview = normalize(worldpos.xyz - cameraPosition);
 
     // 
-    #ifdef SOLID
-    bool normalCorrect = dot(worldview.xyz, normal.xyz) <= 0.f;
-    #else
     bool normalCorrect = true;
+    #ifdef SOLID
+        normalCorrect = dot(worldview.xyz, normal.xyz) <= 0.f;
     #endif
-    
-    gl_FragData[0] = vec4(0.f.xxxx);
-    gl_FragData[1] = vec4(0.f.xxxx);
-    gl_FragData[2] = vec4(0.f.xxxx);
-    gl_FragData[3] = vec4(0.f.xxxx);
-    gl_FragData[4] = vec4(0.f.xxxx);
-    gl_FragData[5] = vec4(0.f.xxxx);
-    gl_FragData[6] = vec4(0.f.xxxx);
-    gl_FragData[7] = vec4(0.f.xxxx);
-    gl_FragDepth = 2.f;
 
-    const float height = texture(gaux4, vec2(0.25f, 0.25f)).y;
+    // 
+    const float height = texture(gaux4, vec3(0.5f, 0.5f, 0.f)).y;
+
+    // 
+    vec4 f_color = vec4(0.f.xxxx);
+    vec4 f_lightmap = vec4(0.f.xxxx);
+    vec4 f_normal = vec4(0.f.xxxx);
+    vec4 f_detector = vec4(0.f.xxxx);
+    vec4 f_tangent = vec4(0.f.xxxx);
+    vec4 f_planar = vec4(0.f.xxxx);
+    float f_depth = 2.f;
+
 #ifndef SKY
-	if (coordf.x >= 0.f && coordf.y >= 0.f && coordf.x < 1.f && coordf.y < 1.f && (instanceId == 0 || planar.y < height - 0.001f) && normalCorrect) 
-#else
-    if (coordf.x >= 0.f && coordf.y >= 0.f && coordf.x < 1.f && coordf.y < 1.f) 
+	if (planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0) 
 #endif
     {
-        gl_FragDepth = gl_FragCoord.z;
+        f_depth = gl_FragCoord.z;
 
-    #ifdef SOLID
-		//this is the scene color
-		gl_FragData[0] = texture(tex, texcoord.st) * color;
-
-        if (entity.x == 2.f) {
-            gl_FragData[0] = color * vec4(0.0f.xxx, 0.1f);
-        }
-
-        gl_FragData[0] *= texture(lightmap, lmcoord.xy);
-
-		//write normals to a buffer to be reused later, doing *0.5+0.5 to them because they are in -1 to 1 range but buffers cant store negative values
-		gl_FragData[1] = vec4(normal*0.5+0.5, 1.0);
-
-		//write lightmaps to a buffer because we wanna use them later
-		gl_FragData[2] = vec4(lmcoord.xy, 0.0, 1.0);
-		gl_FragDepth = gl_FragCoord.z;
-
-        gl_FragData[3] = vec4(0.f.xxx, 1.f);
-        gl_FragData[4] = vec4(tangent.xyz * 0.5f + 0.5f, 1.f);
+    #ifdef SOLID //
+		f_color = texture(tex, texcoord.st) * color;
+        f_color *= texture(lightmap, lmcoord.xy);
+		f_normal = vec4(normal, 1.0);
+        f_tangent = vec4(tangent.xyz, 1.f);
+		f_lightmap = vec4(lmcoord.xy, 0.0, 1.0);
+        
+        if (entity.x == 2.f) { f_color = color * vec4(0.0f.xxx, 0.1f); }
         if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.999f) {
-            gl_FragData[7] = vec4(planar.xyz, 1.0f);
-            gl_FragData[3] = vec4(1.f.xxx, 1.f);
+            f_planar = vec4(planar.xyz, 1.0f);
+            f_detector = vec4(1.f.xxx, 1.f);
         }
+    #endif
+
+    #if defined(OTHER) || defined(SKY)
+        #ifdef BASIC
+            f_color = color;
+        #else
+            f_color = texture(tex, texcoord.st) * color;
+        #endif
     #endif
 
     #ifdef SKY
-        #ifdef BASIC
-            gl_FragData[0] = color;
-        #else
-            gl_FragData[0] = texture(tex, texcoord.st) * color;
-        #endif
-
-        gl_FragData[1] = vec4(vec3(0.f,0.f,1.f), 1.0);
-        gl_FragDepth = 1.f;
-
-        if (fogMode == GL_EXP) {
-            gl_FragData[0].rgb = mix(gl_FragData[0].rgb, gl_Fog.color.rgb, 1.0 - clamp(exp(-gl_Fog.density * gl_FogFragCoord), 0.0, 1.0));
-        } else if (fogMode == GL_LINEAR) {
-            gl_FragData[0].rgb = mix(gl_FragData[0].rgb, gl_Fog.color.rgb, clamp((gl_FogFragCoord - gl_Fog.start) * gl_Fog.scale, 0.0, 1.0));
-        }
+        f_normal = vec4(vec3(0.f, 0.f, 1.f), 1.0);
+        f_lightmap = vec4(vec3(0.f,0.f,1.f), 1.0);
+        f_depth = 1.f;
     #endif
 
-    #ifdef WEATHER
-        gl_FragData[0] = texture(tex, texcoord.st) * texture(lightmap, lmcoord.st) * color;
-        gl_FragData[0] *= texture(lightmap, lmcoord.xy);
-        gl_FragData[1] = vec4(normal*0.5+0.5, 1.0);
-        gl_FragData[2] = vec4(lmcoord.xy, 0.0, 1.0);
-        gl_FragDepth = gl_FragCoord.z;
-    #endif
-
-    #ifdef HAND
-        gl_FragData[0] = texture(tex, texcoord.st) * texture(lightmap, lmcoord.st) * color;
-        gl_FragData[0] *= texture(lightmap, lmcoord.xy);
-        gl_FragData[1] = vec4(normal*0.5+0.5, 1.0);
-        gl_FragData[2] = vec4(lmcoord.xy, 0.0, 1.0);
-        gl_FragDepth = gl_FragCoord.z;
+    #if defined(WEATHER) || defined(HAND)
+        f_color = texture(tex, texcoord.st) * texture(lightmap, lmcoord.st) * color;
+        f_color *= texture(lightmap, lmcoord.xy);
+        f_normal = vec4(normal, 1.0);
+        f_lightmap = vec4(lmcoord.xy, 0.0, 1.0);
     #endif
 
     #ifdef OTHER
-        #ifdef BASIC
-            gl_FragData[0] = color;
-        #else
-            gl_FragData[0] = texture(tex, texcoord.st) * color;
-        #endif
+        f_lightmap = vec4(vec3(gl_FragCoord.z), 1.0f);
+    #endif
+    
+    #if defined(OTHER) || defined(SKY)
+        if (fogMode == GL_EXP   ) { f_color.rgb = mix(f_color.rgb, gl_Fog.color.rgb, 1.0 - clamp(exp(-gl_Fog.density * gl_FogFragCoord), 0.0, 1.0)); } else 
+        if (fogMode == GL_LINEAR) { f_color.rgb = mix(f_color.rgb, gl_Fog.color.rgb, clamp((gl_FogFragCoord - gl_Fog.start) * gl_Fog.scale, 0.0, 1.0)); };
+    #endif
+
+	}
+#ifndef SKY
+    else { discard; };
+#endif
+
+    // finalize results
+    {   // 
+        f_normal.xyz = f_normal.xyz * 0.5f + 0.5f;
+        f_tangent.xyz = f_tangent.xyz * 0.5f + 0.5f;
 
         // 
-        gl_FragData[1] = vec4(vec3(gl_FragCoord.z), 1.0f);
-        gl_FragDepth = gl_FragCoord.z;
-
-        if (fogMode == GL_EXP) {
-            gl_FragData[0].rgb = mix(gl_FragData[0].rgb, gl_Fog.color.rgb, 1.0 - clamp(exp(-gl_Fog.density * gl_FogFragCoord), 0.0, 1.0));
-        } else if (fogMode == GL_LINEAR) {
-            gl_FragData[0].rgb = mix(gl_FragData[0].rgb, gl_Fog.color.rgb, clamp((gl_FogFragCoord - gl_Fog.start) * gl_Fog.scale, 0.0, 1.0));
-        };
-    #endif
-	} else {
-        discard;
-        gl_FragData[0] = vec4(0.f.xxxx);
-        gl_FragData[1] = vec4(0.f.xxxx);
-        gl_FragData[2] = vec4(0.f.xxxx);
-        gl_FragData[3] = vec4(0.f.xxxx);
-        gl_FragData[4] = vec4(0.f.xxxx);
+        gl_FragData[0] = f_color;
+        gl_FragData[1] = f_normal;
+        gl_FragData[2] = f_lightmap;
+        gl_FragData[3] = f_detector;
+        gl_FragData[4] = f_tangent;
         gl_FragData[5] = vec4(0.f.xxxx);
         gl_FragData[6] = vec4(0.f.xxxx);
-        gl_FragData[7] = vec4(0.f.xxxx);
-		gl_FragDepth = 2.f;
-	};
+        gl_FragData[7] = f_planar;
+        gl_FragDepth = f_depth;
+    };
 
-    // 
-    //gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
 #endif
 
 
