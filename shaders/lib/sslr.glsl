@@ -31,7 +31,7 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection){
     screenSpaceDirection.xyz = normalize(screenSpaceDirection.xyz);
 
     // 
-    const vec2 screenSpaceDirSize = abs(screenSpaceDirection.xy);
+    const vec2 screenSpaceDirSize = abs(screenSpaceDirection.xy*vec2(viewWidth,viewHeight));
     screenSpaceDirection.xyz /= max(screenSpaceDirSize.x,screenSpaceDirSize.y)*(1.f/16.f); // half of image size
 
     // 

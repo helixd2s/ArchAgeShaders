@@ -157,6 +157,8 @@ void main() {
         f_tangent = vec4(tangent.xyz, 1.f);
 		f_lightmap = vec4(lmcoord.xy, 0.0, 1.0);
         
+        f_normal.xyz = dot(f_normal.xyz.xyz, worldview.xyz) >= 0.f ? -f_normal.xyz : f_normal.xyz;
+
         if (entity.x == 2.f) { f_color = color * vec4(0.0f.xxx, 0.1f); }
         if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.999f) {
             f_planar = vec4(planar.xyz, 1.0f);
