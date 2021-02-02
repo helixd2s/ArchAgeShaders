@@ -9,7 +9,7 @@ float GetDepthSSR(in vec2 screenSpaceCoord) {
     const vec2 ttf = fract(txy*textureSize(depthtex0,0).xy-0.5f);
     const vec2 px = vec2(1.f-ttf.x,ttf.x), py = vec2(1.f-ttf.y,ttf.y);
     const mat2x2 i2 = outerProduct(px,py);
-    return dot(txl,vec4(i2[0],i2[1]).zwyx); // interpolate
+    return (dot(txl,vec4(i2[0],i2[1]).zwyx)); // interpolate
 }
 
 vec3 GetNormalSSR(in vec2 screenSpaceCoord) {
@@ -34,11 +34,15 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection) {
         const float height = sampleLayer(colortex7, vec2(0.5f, 0.5f), DEFAULT_SCENE).y;
         vec4 WSP = CameraSpaceToModelSpace(vec4(cameraSpaceOrigin, 1.f));
         WSP /= WSP.w;
+        
+        // cameraPosition or matrices IS INCORRECT!
         WSP.y += cameraPosition.y;
         WSP.y -= height;
         WSP.y *= -1.f;
         WSP.y += height;
         WSP.y -= cameraPosition.y;
+        
+        
         cameraSpaceOrigin = divW(ModelSpaceToCameraSpace(WSP));
     };
 
@@ -53,7 +57,7 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection) {
     screenSpaceDirection.xyz /= max(screenSpaceDirSize.x,screenSpaceDirSize.y)*(1.f/16.f); // half of image size
 
     // 
-    vec4 finalOrigin = vec4(screenSpaceOrigin.xyz,0.f);
+    vec4 finalOrigin = vec4(/*screenSpaceOrigin.xyz*/0.f.xxx,0.f);
     screenSpaceOrigin.xyz += screenSpaceDirection.xyz*0.0625f;
     for (int i=0;i<256;i++) { // do precise as possible 
         
@@ -81,7 +85,7 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection) {
             screenSpaceOrigin = CameraSpaceToScreenSpace(vec4(cameraSpaceDirection*dist+cameraSpaceOrigin,1.f)).xyz;
             
             // check ray deviation 
-            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && dot(GetNormalSSR(screenSpaceOrigin.xy),cameraNormal)>=0.5f /*&& abs(GetDepthSSR(screenSpaceOrigin.xy)-screenSpaceOrigin.z)<0.0001f*/) {
+            if (dot(cameraNormal,cameraSpaceDirection)<=0.f /*&& dot(GetNormalSSR(screenSpaceOrigin.xy),cameraNormal)>=0.5f && abs(GetDepthSSR(screenSpaceOrigin.xy)-screenSpaceOrigin.z)<0.0001f*/) {
                 finalOrigin.xyz = screenSpaceOrigin, finalOrigin.w = 1.f; //break; 
             };
             break; // 

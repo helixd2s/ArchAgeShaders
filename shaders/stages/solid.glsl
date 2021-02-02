@@ -83,13 +83,15 @@ uniform sampler2D lightmap;	//the vanilla lightmap texture, basically useless wi
 
 // 
 #include "../lib/common.glsl"
+#include "../lib/math.glsl"
+#include "../lib/transforms.glsl"
 
 uniform samplerTyped gaux4;
 
 void main() {
 #ifdef VERTEX_SHADER
 	texcoord = gl_TextureMatrix[0] * gl_MultiTexCoord0;
-	planar = gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex;
+	planar = CameraSpaceToModelSpace(gl_ModelViewMatrix * gl_Vertex);
     planar.xyz += cameraPosition;
 
     // planar reflected
@@ -105,7 +107,7 @@ void main() {
     };
 
     // 
-	gl_Position = gl_ProjectionMatrix * (gbufferModelView * (planar - vec4(cameraPosition, 0.f)));
+	gl_Position = gl_ProjectionMatrix * (ModelSpaceToCameraSpace(planar - vec4(cameraPosition, 0.f)));
     gl_FogFragCoord = gl_Position.z;
     gl_Layer = instanceId;
 
@@ -130,8 +132,14 @@ void main() {
 	vec2 coordf = gl_FragCoord.xy;// * gl_FragCoord.w;
 	coordf.xy /= vec2(viewWidth, viewHeight);
 
+
+    // CRITICAL MOMENT - NEEDS GET CORRECT DEPTH!
+    //vec4 sslrpos = CameraSpaceToScreenSpace(ModelSpaceToCameraSpace(vec4(planar.xyz-cameraPosition.xyz, 1.f)));
+    //sslrpos /= sslrpos.w;
+    vec4 sslrpos = vec4(coordf * 2.f - 1.f, gl_FragCoord.z*2.f-1.f, 1.f);
+
     // 
-    vec4 viewpos = gbufferProjectionInverse * vec4(coordf * 2.f - 1.f, gl_FragCoord.z, 1.f); viewpos /= viewpos.w;
+    vec4 viewpos = gbufferProjectionInverse * sslrpos; viewpos /= viewpos.w;
     vec3 worldview = normalize(viewpos.xyz);
 
     // 
@@ -158,7 +166,7 @@ void main() {
     if (/*instanceId == 0*/ true) 
 #endif
     {
-        f_depth = gl_FragCoord.z;
+        f_depth = sslrpos.z;
 
     #ifdef SOLID //
 		f_color = texture(tex, texcoord.st) * color;

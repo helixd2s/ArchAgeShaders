@@ -62,6 +62,10 @@ uniform samplerTyped colortex3;
     const bool colortex7Clear = false;
 */
 
+bvec3 and(in bvec3 a, in bvec3 b) {
+    return bvec3(a.x&&b.x, a.y&&b.y, a.z&&b.z);
+}
+
 void main() {
     if (layerId == 0) {
         ivec2  texcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
@@ -91,7 +95,7 @@ void main() {
         vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)));
         rtexcoord = ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight));
         vec3 reflColor = fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).rgb;
-        if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f) { reflColor = skyColor; };
+        if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { reflColor = skyColor; };
 
         gl_FragData[0] = vec4(mix(sceneColor, reflColor, filterRefl > 0.999f ? (0.1f + reflcoef*vec3(0.4f.xxx)) : vec3(0.f.xxx)), 1.0);
         gl_FragData[7] = sampleLayer(colortex7, vtexcoord, DEFAULT_SCENE);
