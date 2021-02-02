@@ -154,6 +154,8 @@ void main() {
 
 #ifndef SKY
 	if (planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) 
+#else
+    if (/*instanceId == 0*/ true) 
 #endif
     {
         f_depth = gl_FragCoord.z;
@@ -167,10 +169,9 @@ void main() {
         
         f_normal.xyz = dot(f_normal.xyz.xyz, worldview.xyz) >= 0.f ? -f_normal.xyz : f_normal.xyz;
 
-        if (entity.x == 2.f) { f_color = color * vec4(0.0f.xxx, 0.1f); }
-        if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.999f) {
+        if (entity.x == 2.f) { f_color = color * vec4(0.0f.xxx, 0.1f), f_detector = vec4(1.f.xxx, 1.f); }
+        if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.99f) {
             f_planar = vec4(planar.xyz, 1.0f);
-            f_detector = vec4(1.f.xxx, 1.f);
         }
     #endif
 
@@ -205,9 +206,9 @@ void main() {
     #endif
 
 	}
-#ifndef SKY
+//#ifndef SKY
     else { discard; };
-#endif
+//#endif
 
     // finalize results
     {   // 

@@ -18,12 +18,30 @@ vec3 GetNormalSSR(in vec2 screenSpaceCoord) {
     return normalize(colp*2.f-1.f);
 }
 
+vec3 divW(in vec4 origin) {
+    return origin.xyz / origin.w;
+}
+
 // almost pixel-perfect screen space reflection 
-vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection){
-    vec4 WSR = gbufferModelViewInverse * vec4(cameraSpaceDirection, 0.f);
-    WSR.y *= -1.f;
-    cameraSpaceDirection = (gbufferModelView * WSR).xyz;
+vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection) {
+    {   // needs reflect the reflection ray
+        vec4 WSR = gbufferModelViewInverse * vec4(cameraSpaceDirection, 0.f);
+        WSR.y *= -1.f;
+        cameraSpaceDirection = (gbufferModelView * WSR).xyz;
+    };
     
+    {   // needs to correct plane of those SSLR
+        const float height = sampleLayer(colortex7, vec2(0.5f, 0.5f), DEFAULT_SCENE).y;
+        vec4 WSP = CameraSpaceToModelSpace(vec4(cameraSpaceOrigin, 1.f));
+        WSP /= WSP.w;
+        WSP.y += cameraPosition.y;
+        WSP.y -= height;
+        WSP.y *= -1.f;
+        WSP.y += height;
+        WSP.y -= cameraPosition.y;
+        cameraSpaceOrigin = divW(ModelSpaceToCameraSpace(WSP));
+    };
+
     // 
     vec4 screenSpaceOrigin = CameraSpaceToScreenSpace(vec4(cameraSpaceOrigin,1.f));
     vec4 screenSpaceOriginNext = CameraSpaceToScreenSpace(vec4(cameraSpaceOrigin+cameraSpaceDirection,1.f));
