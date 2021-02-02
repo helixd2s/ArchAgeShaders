@@ -153,7 +153,7 @@ void main() {
     float f_depth = 2.f;
 
 #ifndef SKY
-	if (planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0) 
+	if (planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) 
 #endif
     {
         f_depth = gl_FragCoord.z;
