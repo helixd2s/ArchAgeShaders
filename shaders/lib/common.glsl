@@ -1,7 +1,7 @@
 const int DEFAULT_SCENE = 0;
 const int REFLECTION_SCENE = 1;
 
-#define samplerTyped sampler2D
+#define samplerTyped sampler2DArray
 
 // 
 vec4 sampleLayer(in sampler2DArray smplr, in vec2 texcoord, in int layer) {

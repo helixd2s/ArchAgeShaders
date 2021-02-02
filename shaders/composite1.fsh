@@ -88,8 +88,8 @@ void main() {
             normal = mat3(tangent, bitangent, normal) * ntexture;
         }
 
-        //vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)));
-        //rtexcoord = ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight));
+        vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)));
+        rtexcoord = ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight));
         vec3 reflColor = fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).rgb;
         if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f) { reflColor = skyColor; };
 
@@ -97,5 +97,7 @@ void main() {
         gl_FragData[7] = sampleLayer(colortex7, vtexcoord, DEFAULT_SCENE);
         
         //gl_FragData[0] = vec4(normal*0.5f+0.5f, 1.f);//sampleLayer(colortex0, vtexcoord, REFLECTION_SCENE);
+
+        //gl_FragData[0] = sampleLayer(colortex7, vtexcoord, DEFAULT_SCENE);
     }
 }

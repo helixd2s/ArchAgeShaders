@@ -39,7 +39,7 @@ uniform int fogMode;
 // 
 const int GL_LINEAR = 9729;
 const int GL_EXP = 2048;
-const int countInstances = 1;
+const int countInstances = 2;
 
 // 
 #ifdef VERTEX_SHADER
@@ -95,18 +95,19 @@ void main() {
     // planar reflected
     const float height = sampleLayer(gaux4, vec2(0.5f, 0.5f), DEFAULT_SCENE).y;
     if (instanceId == 1) {
-#ifdef SKY
-        planar.y *= -1.f;
-#else
+//#ifdef SKY
+//        planar.y *= -1.f;
+//#else
         planar.y -= height;
         planar.y *= -1.f;
         planar.y += height;
-#endif
+//#endif
     };
 
     // 
 	gl_Position = gl_ProjectionMatrix * (gbufferModelView * (planar - vec4(cameraPosition, 0.f)));
     gl_FogFragCoord = gl_Position.z;
+    gl_Layer = instanceId;
 
     // 
     lmcoord = gl_TextureMatrix[1] * gl_MultiTexCoord1;
