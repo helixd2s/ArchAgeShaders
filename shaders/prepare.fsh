@@ -17,9 +17,11 @@ layout (location = 1) in flat int layerId;
 
 /*DRAWBUFFERS:01234567*/
 
+uniform vec3 skyColor;
+
 void main() {
     gl_FragDepth = 1.f;
-    gl_FragData[0] = vec4(0.f.xxxx);
+    gl_FragData[0] = vec4(skyColor, 1.f);
     gl_FragData[1] = vec4(0.f.xxxx);
     gl_FragData[2] = vec4(0.f.xxxx);
     gl_FragData[3] = vec4(0.f.xxxx);

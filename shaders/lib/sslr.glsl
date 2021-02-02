@@ -85,7 +85,7 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection) {
             screenSpaceOrigin = CameraSpaceToScreenSpace(vec4(cameraSpaceDirection*dist+cameraSpaceOrigin,1.f)).xyz;
             
             // check ray deviation 
-            if (dot(cameraNormal,cameraSpaceDirection)<=0.f /*&& dot(GetNormalSSR(screenSpaceOrigin.xy),cameraNormal)>=0.5f && abs(GetDepthSSR(screenSpaceOrigin.xy)-screenSpaceOrigin.z)<0.0001f*/) {
+            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && dot(GetNormalSSR(screenSpaceOrigin.xy),cameraNormal)>=0.5f /*&& abs(GetDepthSSR(screenSpaceOrigin.xy)-screenSpaceOrigin.z)<0.0001f*/) {
                 finalOrigin.xyz = screenSpaceOrigin, finalOrigin.w = 1.f; //break; 
             };
             break; // 

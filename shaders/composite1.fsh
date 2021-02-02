@@ -26,6 +26,7 @@ uniform mat4 shadowModelView;
 uniform samplerTyped depthtex0;
 uniform samplerTyped colortex0;
 uniform samplerTyped colortex1;
+uniform samplerTyped colortex2;
 uniform samplerTyped colortex4;
 uniform samplerTyped colortex7;
 uniform samplerTyped colortex3;
@@ -86,6 +87,8 @@ void main() {
         float reflcoef  = 1.f - abs(dot(normalize(screenpos), normal));
 
         vec3 sceneColor = fetchLayer(colortex0, texcoord, DEFAULT_SCENE).rgb;
+        vec3 lightmapColor = fetchLayer(colortex2, texcoord, DEFAULT_SCENE).rgb;
+
         float filterRefl = fetchLayer(colortex3, texcoord, DEFAULT_SCENE).r;
         if (filterRefl > 0.999f) {
             vec3 ntexture = normalize(mix(get_water_normal(worldpos, 1.f, world_normal, world_tangent, world_bitangent).xzy, vec3(0.f,0.f,1.f), 0.95f));
@@ -95,7 +98,7 @@ void main() {
         vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)));
         rtexcoord = ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight));
         vec3 reflColor = fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).rgb;
-        if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { reflColor = skyColor; };
+        if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { reflColor = skyColor*lightmapColor; };
 
         gl_FragData[0] = vec4(mix(sceneColor, reflColor, filterRefl > 0.999f ? (0.1f + reflcoef*vec3(0.4f.xxx)) : vec3(0.f.xxx)), 1.0);
         gl_FragData[7] = sampleLayer(colortex7, vtexcoord, DEFAULT_SCENE);

@@ -1,24 +1,22 @@
 //these will be available in the fragment shader now, this can be more efficient for some calculations too because per-vertex is cheaper than per fragment/pixel
 //stuff like sunlight color get's usually done here because of that
 #ifdef VERTEX_SHADER
-layout (location = 0) out vec4 color;
-layout (location = 1) out vec4 texcoord;
-layout (location = 2) out vec4 lmcoord;
-layout (location = 3) out vec3 normal;
-layout (location = 4) out vec4 tangent;
-layout (location = 5) out vec4 planar;
-layout (location = 6) flat out vec4 entity;
+layout (location = 0) flat out vec4 entity;
+layout (location = 1) out vec4 color;
+layout (location = 2) out vec4 texcoord;
+layout (location = 3) out vec4 lmcoord;
+layout (location = 4) out vec3 normal;
+layout (location = 5) out vec4 tangent;
 #endif
 
 //these are our inputs from the vertex shader
 #ifdef FRAGMENT_SHADER
-layout (location = 0) in vec4 color;
-layout (location = 1) in vec4 texcoord;
-layout (location = 2) in vec4 lmcoord;
-layout (location = 3) in vec3 normal;
-layout (location = 4) in vec4 tangent;
-layout (location = 5) in vec4 planar;
-layout (location = 6) flat in vec4 entity;
+layout (location = 0) flat in vec4 entity;
+layout (location = 1) in vec4 color;
+layout (location = 2) in vec4 texcoord;
+layout (location = 3) in vec4 lmcoord;
+layout (location = 4) in vec3 normal;
+layout (location = 5) in vec4 tangent;
 #endif
 
 //
@@ -32,11 +30,10 @@ uniform vec3 cameraPosition;
 uniform int instanceId;
 uniform float viewWidth;
 uniform float viewHeight;
-uniform vec4 fogColor;
 uniform int worldTime;
-uniform int fogMode;
 
 // 
+const int GL_EXP2 = 2049;
 const int GL_LINEAR = 9729;
 const int GL_EXP = 2048;
 const int countInstances = 2;
@@ -88,27 +85,33 @@ uniform sampler2D lightmap;	//the vanilla lightmap texture, basically useless wi
 
 uniform samplerTyped gaux4;
 
+uniform int fogMode;
+uniform float fogDensity;
+uniform vec3 fogColor; 
+
 void main() {
 #ifdef VERTEX_SHADER
 	texcoord = gl_TextureMatrix[0] * gl_MultiTexCoord0;
-	planar = CameraSpaceToModelSpace(gl_ModelViewMatrix * gl_Vertex);
-    planar.xyz += cameraPosition;
-
+    vec4 camera = gl_ModelViewMatrix * gl_Vertex;
+    vec4 planar = CameraSpaceToModelSpace(camera);
+    
     // planar reflected
     const float height = sampleLayer(gaux4, vec2(0.5f, 0.5f), DEFAULT_SCENE).y;
     if (instanceId == 1) {
-//#ifdef SKY
+//#ifdef SKY // sun became larger when up-far
 //        planar.y *= -1.f;
-//#else
+//#else // sun became higher when up-far
+        planar.xyz += cameraPosition;
         planar.y -= height;
         planar.y *= -1.f;
         planar.y += height;
+        planar.xyz -= cameraPosition;
 //#endif
     };
 
     // 
-	gl_Position = gl_ProjectionMatrix * (ModelSpaceToCameraSpace(planar - vec4(cameraPosition, 0.f)));
-    gl_FogFragCoord = gl_Position.z;
+	gl_Position = gl_ProjectionMatrix * ModelSpaceToCameraSpace(planar);
+    gl_FogFragCoord = length(camera.xyz);
     gl_Layer = instanceId;
 
     // 
@@ -136,7 +139,11 @@ void main() {
     // CRITICAL MOMENT - NEEDS GET CORRECT DEPTH!
     //vec4 sslrpos = CameraSpaceToScreenSpace(ModelSpaceToCameraSpace(vec4(planar.xyz-cameraPosition.xyz, 1.f)));
     //sslrpos /= sslrpos.w;
+
+    // 
     vec4 sslrpos = vec4(coordf * 2.f - 1.f, gl_FragCoord.z*2.f-1.f, 1.f);
+    vec4 planar = CameraSpaceToModelSpace(ScreenSpaceToCameraSpace(sslrpos));
+    planar.xyz += cameraPosition;
 
     // 
     vec4 viewpos = gbufferProjectionInverse * sslrpos; viewpos /= viewpos.w;
@@ -173,7 +180,7 @@ void main() {
         f_color *= texture(lightmap, lmcoord.xy);
 		f_normal = vec4(normal, 1.0);
         f_tangent = vec4(tangent.xyz, 1.f);
-		f_lightmap = vec4(lmcoord.xy, 0.0, 1.0);
+		f_lightmap = texture(lightmap, lmcoord.xy);//vec4(lmcoord.xy, 0.0, 1.0);
         
         f_normal.xyz = dot(f_normal.xyz.xyz, worldview.xyz) >= 0.f ? -f_normal.xyz : f_normal.xyz;
 
@@ -209,8 +216,10 @@ void main() {
     #endif
 
     #if defined(OTHER) || defined(SKY)
-        if (fogMode == GL_EXP   ) { f_color.rgb = mix(f_color.rgb, gl_Fog.color.rgb, 1.0 - clamp(exp(-gl_Fog.density * gl_FogFragCoord), 0.0, 1.0)); } else 
-        if (fogMode == GL_LINEAR) { f_color.rgb = mix(f_color.rgb, gl_Fog.color.rgb, clamp((gl_FogFragCoord - gl_Fog.start) * gl_Fog.scale, 0.0, 1.0)); };
+        float len = length(ScreenSpaceToCameraSpace(sslrpos).xyz);
+        if (fogMode == GL_LINEAR) { f_color.rgb = mix(f_color.rgb, fogColor, clamp((len - gl_Fog.start) * gl_Fog.scale, 0.0, 1.0)); } else
+        if (fogMode == GL_EXP   ) { f_color.rgb = mix(f_color.rgb, fogColor, 1.0 - clamp(exp(-fogDensity * len), 0.0, 1.0)); } //else 
+        //if (fogMode == GL_EXP2  ) { f_color.rgb = mix(f_color.rgb, fogColor, 1.0 - clamp(exp(-pow(fogDensity * len, 2.f)), 0.0, 1.0)); }
     #endif
 
 	}
