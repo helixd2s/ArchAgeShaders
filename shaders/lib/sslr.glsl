@@ -3,18 +3,18 @@ vec4 GetColorSSR(){
     return vec4(0.f);
 }
 
-float GetDepthSSR(in vec2 screenSpaceCoord) {
+float GetDepthSSR(in vec2 screenSpaceCoord, in int sceneId) {
     const vec2 txy = (screenSpaceCoord*0.5f+0.5f); // normalize screen space coordinates
-    const vec4 txl = gatherLayer(depthtex0,txy,REFLECTION_SCENE,0);
+    const vec4 txl = gatherLayer(depthtex0,txy,sceneId,0);
     const vec2 ttf = fract(txy*textureSize(depthtex0,0).xy-0.5f);
     const vec2 px = vec2(1.f-ttf.x,ttf.x), py = vec2(1.f-ttf.y,ttf.y);
     const mat2x2 i2 = outerProduct(px,py);
     return (dot(txl,vec4(i2[0],i2[1]).zwyx)); // interpolate
 }
 
-vec3 GetNormalSSR(in vec2 screenSpaceCoord) {
+vec3 GetNormalSSR(in vec2 screenSpaceCoord, in int sceneId) {
     const vec2 txy = (screenSpaceCoord*0.5f+0.5f);
-    const vec3 colp = fetchLayer(colortex1, ivec2(txy.xy*textureSize(colortex1,0).xy), REFLECTION_SCENE).xyz;
+    const vec3 colp = fetchLayer(colortex1, ivec2(txy.xy*textureSize(colortex1,0).xy), sceneId).xyz;
     return normalize(colp*2.f-1.f);
 }
 
@@ -23,27 +23,30 @@ vec3 divW(in vec4 origin) {
 }
 
 // almost pixel-perfect screen space reflection 
-vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection) {
-    {   // needs reflect the reflection ray
-        vec4 WSR = gbufferModelViewInverse * vec4(cameraSpaceDirection, 0.f);
-        WSR.y *= -1.f;
-        cameraSpaceDirection = (gbufferModelView * WSR).xyz;
-    };
-    
-    {   // needs to correct plane of those SSLR
-        const float height = sampleLayer(colortex7, vec2(0.5f, 0.5f), DEFAULT_SCENE).y;
-        vec4 WSP = CameraSpaceToModelSpace(vec4(cameraSpaceOrigin, 1.f));
-        WSP /= WSP.w;
+vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int sceneId, in bool filterDepth) {
+
+    if (sceneId == REFLECTION_SCENE) {
+        {   // needs reflect the reflection ray
+            vec4 WSR = gbufferModelViewInverse * vec4(cameraSpaceDirection, 0.f);
+            WSR.y *= -1.f;
+            cameraSpaceDirection = (gbufferModelView * WSR).xyz;
+        };
         
-        // cameraPosition or matrices IS INCORRECT!
-        WSP.y += cameraPosition.y;
-        WSP.y -= height;
-        WSP.y *= -1.f;
-        WSP.y += height;
-        WSP.y -= cameraPosition.y;
-        
-        
-        cameraSpaceOrigin = divW(ModelSpaceToCameraSpace(WSP));
+        {   // needs to correct plane of those SSLR
+            const float height = sampleLayer(colortex7, vec2(0.5f, 0.5f), WATER_SCENE).y;
+            vec4 WSP = CameraSpaceToModelSpace(vec4(cameraSpaceOrigin, 1.f));
+            WSP /= WSP.w;
+            
+            // cameraPosition or matrices IS INCORRECT!
+            WSP.y += cameraPosition.y;
+            WSP.y -= height;
+            WSP.y *= -1.f;
+            WSP.y += height;
+            WSP.y -= cameraPosition.y;
+            
+            
+            cameraSpaceOrigin = divW(ModelSpaceToCameraSpace(WSP));
+        };
     };
 
     // 
@@ -65,30 +68,37 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection) {
         if (any(lessThanEqual(screenSpaceOrigin.xyz,vec3(-1.f.xx,-0.1f))) || any(greaterThan(screenSpaceOrigin.xyz,vec3(1.f.xx,1.1f.x)))) { break; };
 
         // 
-        if ((GetDepthSSR(screenSpaceOrigin.xy)-1e-8f)<=screenSpaceOrigin.z) {
+        if ((GetDepthSSR(screenSpaceOrigin.xy, sceneId)-1e-8f)<=screenSpaceOrigin.z) {
             vec3 screenSpaceOrigin = screenSpaceOrigin.xyz-screenSpaceDirection.xyz, screenSpaceDirection = screenSpaceDirection.xyz * 0.5f;
 
-            // ray origin refinement
+            // do refinements
             for (int j=0;j<16;j++) {
-                if ((GetDepthSSR(screenSpaceOrigin.xy)-1e-8f)<=screenSpaceOrigin.z) {
+                float ssdepth = GetDepthSSR(screenSpaceOrigin.xy, sceneId)-1e-8f;
+                if (ssdepth<=screenSpaceOrigin.z) {
                     screenSpaceOrigin -= screenSpaceDirection, screenSpaceDirection *= 0.5f;
                 } else {
                     screenSpaceOrigin += screenSpaceDirection;
                 }
+
+                // if too small distance, then break
+                if (abs(screenSpaceOrigin.z - ssdepth) < 0.0001f) { break; };
             }
 
-            const vec3 cameraNormal = GetNormalSSR(screenSpaceOrigin.xy);
-            
+            // 
+            const vec3 cameraNormal = GetNormalSSR(screenSpaceOrigin.xy, sceneId);
+
             // recalculate ray origin by normal 
-            const vec3 inPosition = ScreenSpaceToCameraSpace(vec4(screenSpaceOrigin.xy,GetDepthSSR(screenSpaceOrigin.xy),1.f)).xyz;
+            const vec3 inPosition = ScreenSpaceToCameraSpace(vec4(screenSpaceOrigin.xy,GetDepthSSR(screenSpaceOrigin.xy, sceneId),1.f)).xyz;
             const float dist = dot(inPosition.xyz-cameraSpaceOrigin,cameraNormal)/dot(cameraNormal,cameraSpaceDirection);
             screenSpaceOrigin = CameraSpaceToScreenSpace(vec4(cameraSpaceDirection*dist+cameraSpaceOrigin,1.f)).xyz;
-            
+
             // check ray deviation 
-            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && dot(GetNormalSSR(screenSpaceOrigin.xy),cameraNormal)>=0.5f /*&& abs(GetDepthSSR(screenSpaceOrigin.xy)-screenSpaceOrigin.z)<0.0001f*/) {
-                finalOrigin.xyz = screenSpaceOrigin, finalOrigin.w = 1.f; //break; 
-            };
-            break; // 
+            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && dot(GetNormalSSR(screenSpaceOrigin.xy, sceneId),cameraNormal)>=0.5f && (!filterDepth || abs(GetDepthSSR(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<0.0001f)) {
+                finalOrigin.xyz = screenSpaceOrigin, finalOrigin.w = 1.f; break; // 
+            }
+
+            // use fast reflections
+            break;
         }
 
         // 

@@ -96,7 +96,7 @@ void main() {
     vec4 planar = CameraSpaceToModelSpace(camera);
     
     // planar reflected
-    const float height = sampleLayer(gaux4, vec2(0.5f, 0.5f), DEFAULT_SCENE).y;
+    const float height = sampleLayer(gaux4, vec2(0.5f, 0.5f), WATER_SCENE).y;
     if (instanceId == 1) {
 //#ifdef SKY // sun became larger when up-far
 //        planar.y *= -1.f;
@@ -112,7 +112,16 @@ void main() {
     // 
 	gl_Position = gl_ProjectionMatrix * ModelSpaceToCameraSpace(planar);
     gl_FogFragCoord = length(camera.xyz);
-    gl_Layer = instanceId;
+    
+    
+    if (instanceId == 0) {
+        if (mc_Entity.x == 2.f) {
+            gl_Layer = 2;
+        } else {
+            gl_Layer = 0;
+        }
+    } else 
+    { gl_Layer = 1; };
 
     // 
     lmcoord = gl_TextureMatrix[1] * gl_MultiTexCoord1;
@@ -156,7 +165,7 @@ void main() {
     #endif
 
     // 
-    const float height = sampleLayer(gaux4, vec2(0.5f, 0.5f), DEFAULT_SCENE).y;
+    const float height = sampleLayer(gaux4, vec2(0.5f, 0.5f), WATER_SCENE).y;
 
     // 
     vec4 f_color = vec4(0.f.xxxx);

@@ -24,6 +24,7 @@ uniform mat4 shadowModelView;
 #include "/lib/common.glsl"
 
 uniform samplerTyped depthtex0;
+//uniform samplerTyped depthtex1;
 uniform samplerTyped colortex0;
 uniform samplerTyped colortex1;
 uniform samplerTyped colortex2;
@@ -67,17 +68,18 @@ bvec3 and(in bvec3 a, in bvec3 b) {
     return bvec3(a.x&&b.x, a.y&&b.y, a.z&&b.z);
 }
 
+// THIS IS WATER SHADER
 void main() {
     if (layerId == 0) {
         ivec2  texcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
         ivec2 rtexcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
 
-        vec3 sceneDepth = fetchLayer(depthtex0, texcoord, DEFAULT_SCENE).xxx;
+        vec3 sceneDepth = fetchLayer(depthtex0, texcoord, WATER_SCENE).xxx;
         vec3 screenpos 	= getScreenpos(sceneDepth.x, vtexcoord);
         vec3 worldpos   = toWorldpos(screenpos);
 
-        vec3 normal     = normalize(fetchLayer(colortex1, texcoord, DEFAULT_SCENE).rgb * 2.f - 1.f);
-        vec3 tangent    = normalize(fetchLayer(colortex4, texcoord, DEFAULT_SCENE).rgb * 2.f - 1.f);
+        vec3 normal     = normalize(fetchLayer(colortex1, texcoord, WATER_SCENE).rgb * 2.f - 1.f);
+        vec3 tangent    = normalize(fetchLayer(colortex4, texcoord, WATER_SCENE).rgb * 2.f - 1.f);
         vec3 bitangent  = normalize(cross(tangent, normal));
 
         vec3 world_bitangent = mat3(gbufferModelViewInverse) * bitangent;
@@ -87,24 +89,23 @@ void main() {
         float reflcoef  = 1.f - abs(dot(normalize(screenpos), normal));
 
         vec3 sceneColor = fetchLayer(colortex0, texcoord, DEFAULT_SCENE).rgb;
-        vec3 lightmapColor = fetchLayer(colortex2, texcoord, DEFAULT_SCENE).rgb;
+        vec3 lightmapColor = fetchLayer(colortex2, texcoord, WATER_SCENE).rgb;
 
-        float filterRefl = fetchLayer(colortex3, texcoord, DEFAULT_SCENE).r;
+        float filterRefl = fetchLayer(colortex3, texcoord, WATER_SCENE).r;
         if (filterRefl > 0.999f) {
             vec3 ntexture = normalize(mix(get_water_normal(worldpos, 1.f, world_normal, world_tangent, world_bitangent).xzy, vec3(0.f,0.f,1.f), 0.95f));
             normal = mat3(tangent, bitangent, normal) * ntexture;
         }
 
-        vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)));
+        vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)), REFLECTION_SCENE, false);
         rtexcoord = ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight));
         vec3 reflColor = fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).rgb;
         if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { reflColor = skyColor*lightmapColor; };
 
+        // mix with ground 
         gl_FragData[0] = vec4(mix(sceneColor, reflColor, filterRefl > 0.999f ? (0.1f + reflcoef*vec3(0.4f.xxx)) : vec3(0.f.xxx)), 1.0);
-        gl_FragData[7] = sampleLayer(colortex7, vtexcoord, DEFAULT_SCENE);
-        
-        //gl_FragData[0] = vec4(normal*0.5f+0.5f, 1.f);//sampleLayer(colortex0, vtexcoord, REFLECTION_SCENE);
-
-        //gl_FragData[0] = sampleLayer(colortex7, vtexcoord, DEFAULT_SCENE);
+        //gl_FragData[0] = vec4(reflColor, 1.f);
     }
+
+    gl_FragData[7] = sampleLayer(colortex7, vtexcoord, layerId);
 }

@@ -1,5 +1,5 @@
 #version 460 compatibility
-#extension GL_ARB_shader_viewport_layer_array : require
+#extension GL_NV_viewport_array2  : require
 
 #define VERTEX_SHADER
 #define CLOUDS 
