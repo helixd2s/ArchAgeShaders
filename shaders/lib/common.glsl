@@ -1,7 +1,7 @@
 const int DEFAULT_SCENE = 0;
-const int REFLECTION_SCENE = 2;
-const int TRANSLUCENT_SCENE = 1;
-const int WATER_SCENE = 3;
+const int REFLECTION_SCENE = 1;
+const int TRANSLUCENT_SCENE = 3;
+const int WATER_SCENE = 2;
 
 #define samplerTyped sampler2DArray
 
