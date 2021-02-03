@@ -1,6 +1,6 @@
 const int DEFAULT_SCENE = 0;
 const int REFLECTION_SCENE = 1;
-const int TRANSLUCENT_SCENE = 1;
+const int TRANSLUCENT_SCENE = 2;
 const int WATER_SCENE = 0;
 
 #define samplerTyped sampler2DArray
@@ -25,7 +25,10 @@ vec4 gatherLayer(in sampler2DArray smplr, in vec2 texcoord, in int layer, const 
 
 // 
 vec4 fetchLayer(in sampler2DArray smplr, in ivec2 texcoord, in int layer) {
+    // BROKEN!
     return texelFetch(smplr, ivec3(texcoord, layer), 0);
+    //vec3 size = textureSize(smplr, 0);
+    //return sampleLayer(smplr, (vec2(texcoord)+0.5f)/size.xy, layer);
 }
 
 

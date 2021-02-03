@@ -113,7 +113,7 @@ void main() {
 	gl_Position = gl_ProjectionMatrix * ModelSpaceToCameraSpace(planar);
     gl_FogFragCoord = length(camera.xyz);
     
-    // 
+    //
     { gl_Layer = DEFAULT_SCENE; };
     if (instanceId == 0) {
         if (mc_Entity.x == 2.f) { gl_Layer = WATER_SCENE; };
@@ -190,7 +190,7 @@ void main() {
         
         f_normal.xyz = dot(f_normal.xyz.xyz, worldview.xyz) >= 0.f ? -f_normal.xyz : f_normal.xyz;
 
-        if (entity.x == 2.f) { f_color = color * vec4(0.0f.xxx, 0.1f), f_detector = vec4(1.f.xxx, 1.f); }
+        if (entity.x == 2.f) { f_color = color * vec4(0.f,0.f,0.f, 0.11f), f_detector = vec4(1.f.xxx, 1.f); }
         if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.99f) {
             f_planar = vec4(planar.xyz, 1.0f);
         }

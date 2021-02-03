@@ -91,6 +91,7 @@ void main() {
         vec3 sceneColor = fetchLayer(colortex0, texcoord, DEFAULT_SCENE).rgb;
         vec3 lightmapColor = fetchLayer(colortex2, texcoord, WATER_SCENE).rgb;
 
+        vec3 waterColor = fetchLayer(colortex0, texcoord, WATER_SCENE).rgb;
         float filterRefl = fetchLayer(colortex3, texcoord, WATER_SCENE).r;
         if (filterRefl > 0.999f) {
             vec3 ntexture = normalize(mix(get_water_normal(worldpos, 1.f, world_normal, world_tangent, world_bitangent).xzy, vec3(0.f,0.f,1.f), 0.95f));
@@ -104,7 +105,8 @@ void main() {
 
         // mix with ground 
         gl_FragData[0] = vec4(mix(sceneColor, reflColor, filterRefl > 0.999f ? (0.1f + reflcoef*vec3(0.4f.xxx)) : vec3(0.f.xxx)), 1.0);
-        //gl_FragData[0] = vec4(reflColor, 1.f);
+        
+        //gl_FragData[0] = vec4(fetchLayer(colortex0, texcoord, REFLECTION_SCENE).rgb, 1.f);
     }
 
     gl_FragData[7] = sampleLayer(colortex7, vtexcoord, layerId);

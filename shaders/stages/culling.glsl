@@ -27,14 +27,22 @@ const ivec3 order[2] = {
     ivec3(2,1,0)
 };
 
+#include "../lib/common.glsl"
+
 // 
 void main() {
-    int layerId = 0;
-    if (instanceId == 1) { layerId = 1; };
-
     // reorder vertices
     for (int i = 0; i < 3; i++) {
         int oi = order[instanceId][i];
+
+        int layerId = DEFAULT_SCENE;
+        if (instanceId == 0) {
+            if (entity[oi].x == 2.f) { layerId = WATER_SCENE; };
+        }
+        if (instanceId == 1) { layerId = REFLECTION_SCENE; };
+        
+        gl_Layer = layerId;
+
         out_color = color[oi];
         out_texcoord = texcoord[oi];
         out_lmcoord = lmcoord[oi];
@@ -42,7 +50,7 @@ void main() {
         out_entity = entity[oi];
         out_tangent = tangent[oi];
         gl_Position = gl_in[oi].gl_Position; 
-        gl_Layer = layerId;
+        //gl_Layer = layerId;
         EmitVertex();
     }
     

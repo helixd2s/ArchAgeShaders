@@ -22,8 +22,8 @@ uniform vec3 skyColor;
 void main() {
     gl_FragDepth = 1.f;
     
-    if (layerId == TRANSLUCENT_SCENE) { gl_FragData[0] = vec4(0.f.xxxx); };
-    if (layerId == WATER_SCENE) { gl_FragData[0] = vec4(0.f.xxxx); };
+    if (layerId == TRANSLUCENT_SCENE) { gl_FragData[0] = vec4(0.f.xxx, 0.f); };
+    if (layerId == WATER_SCENE) { gl_FragData[0] = vec4(0.f.xxx, 0.f); };
     if (layerId == DEFAULT_SCENE) { gl_FragData[0] = vec4(skyColor, 1.f); };
     if (layerId == REFLECTION_SCENE) { gl_FragData[0] = vec4(skyColor, 1.f); };
 
