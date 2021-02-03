@@ -19,6 +19,8 @@ layout (location = 4) in vec3 normal;
 layout (location = 5) in vec4 tangent;
 #endif
 
+#define layerId floatBitsToInt(entity.w)
+
 //
 uniform mat4 gbufferProjection;
 uniform mat4 gbufferProjectionInverse;
@@ -28,8 +30,6 @@ uniform vec3 cameraPosition;
 
 // 
 uniform int instanceId;
-uniform float viewWidth;
-uniform float viewHeight;
 uniform int worldTime;
 
 // 
@@ -48,30 +48,9 @@ attribute vec4 at_tangent;
 //redundant code can be handled like this as an include to make your life easier
 uniform sampler2D tex; 		//this is our albedo texture. optifine's "default" name for this is "texture" but that collides with the texture() function of newer OpenGL versions. We use "tex" or "gcolor" instead, although it is just falling back onto the same sampler as an undefined behavior
 uniform sampler2D lightmap;	//the vanilla lightmap texture, basically useless with shaders
+uniform int frameCounter;
 
-/*
-    const int colortex0Format = RGBA32F;
-    const int colortex1Format = RGBA32F;
-    const int colortex2Format = RGBA32F;
-    const int colortex3Format = RGBA32F;
-    const int colortex4Format = RGBA32F;
-    const int colortex5Format = RGBA32F;
-    const int colortex6Format = RGBA32F;
-    const int colortex7Format = RGBA32F;
-
-    const vec4 colortex0ClearColor = vec4(0.f,0.f,0.f,0.f);
-    const vec4 colortex1ClearColor = vec4(0.f,0.f,0.f,0.f);
-    const vec4 colortex2ClearColor = vec4(0.f,0.f,0.f,0.f);
-    const vec4 colortex3ClearColor = vec4(0.f,0.f,0.f,0.f);
-    const vec4 colortex4ClearColor = vec4(0.f,0.f,0.f,0.f);
-    const vec4 colortex5ClearColor = vec4(0.f,0.f,0.f,0.f);
-    const vec4 colortex6ClearColor = vec4(0.f,0.f,0.f,0.f);
-    const vec4 colortex7ClearColor = vec4(0.f,0.f,0.f,0.f);
-
-    const bool colortex7Clear = false;
-*/
-
-/*DRAWBUFFERS:01234567*/
+/*DRAWBUFFERS:0127*/
 
 #ifdef EARLY_FRAG_TEST
 // NOT SUPPORT SPLIT SCREEN (REQUIRED EXPLICIT CULLING)
@@ -80,11 +59,14 @@ uniform sampler2D lightmap;	//the vanilla lightmap texture, basically useless wi
 
 // 
 #include "../lib/common.glsl"
+#include "../lib/convert.glsl"
+#include "../lib/buffers.glsl"
 #include "../lib/math.glsl"
 #include "../lib/transforms.glsl"
+#include "../lib/random.glsl"
 
 uniform samplerTyped gaux4;
-uniform samplerTyped depthtex0;
+
 
 uniform int fogMode;
 uniform float fogDensity;
@@ -115,11 +97,21 @@ void main() {
     gl_FogFragCoord = length(camera.xyz);
     
     //
-    { gl_Layer = DEFAULT_SCENE; };
+    int layerId_ = DEFAULT_SCENE;
     if (instanceId == 0) {
-        if (mc_Entity.x == 2.f) { gl_Layer = WATER_SCENE; };
-    } 
-    if (instanceId == 1) { gl_Layer = REFLECTION_SCENE; };
+#if defined(WEATHER) || defined(HAND) || defined(BASIC)
+        layerId_ = TRANSLUCENT_SCENE;
+#else
+        if (mc_Entity.x == 3.f) { layerId_ = TRANSLUCENT_SCENE; };
+        if (mc_Entity.x == 2.f) { layerId_ = WATER_SCENE; };
+#endif
+    };
+    if (instanceId == 1) { layerId_ = REFLECTION_SCENE; };
+
+    
+
+    
+    gl_Layer = layerId_;
 
     // 
     lmcoord = gl_TextureMatrix[1] * gl_MultiTexCoord1;
@@ -134,6 +126,7 @@ void main() {
     // 
 	normal = (gbufferModelView * vnormal).xyz;
     entity = mc_Entity;
+    entity.w = intBitsToFloat(layerId_);
     tangent = ( vec4(at_tangent.xyz, 0.f));
 #endif
 
@@ -141,11 +134,6 @@ void main() {
 	// sado guru algorithm
 	vec2 coordf = gl_FragCoord.xy;// * gl_FragCoord.w;
 	coordf.xy /= vec2(viewWidth, viewHeight);
-
-
-    // CRITICAL MOMENT - NEEDS GET CORRECT DEPTH!
-    //vec4 sslrpos = CameraSpaceToScreenSpace(ModelSpaceToCameraSpace(vec4(planar.xyz-cameraPosition.xyz, 1.f)));
-    //sslrpos /= sslrpos.w;
 
     // 
     vec4 sslrpos = vec4(coordf * 2.f - 1.f, gl_FragCoord.z*2.f-1.f, 1.f);
@@ -172,12 +160,15 @@ void main() {
     vec4 f_detector = vec4(0.f.xxxx);
     vec4 f_tangent = vec4(0.f.xxxx);
     vec4 f_planar = vec4(0.f.xxxx);
+    vec2 f_lmcoord = vec2(0.f.xx);
+    vec2 f_texcoord = vec2(0.f.xx);
     float f_depth = 2.f;
 
 #ifndef SKY
-	if ((planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) && (entity.x == 2.f ? sampleLayer(depthtex0, coordf, DEFAULT_SCENE).x >= sslrpos.z && instanceId == 0 : true)) 
+	//if ((planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) && ((entity.x == 2.f || entity.x == 3.f) && instanceId == 0 ? sampleLayer(depthtex0, coordf, instanceId == 1 ? REFLECTION_SCENE : DEFAULT_SCENE).x >= sslrpos.z && instanceId == 0 : true)) 
+    if ((planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) && ((entity.x == 2.f || entity.x == 3.f) ? sampleLayer(depthtex0, coordf, instanceId == 1 ? REFLECTION_SCENE : DEFAULT_SCENE).x >= sslrpos.z && instanceId == 0 : true)) 
 #else
-    if (/*instanceId == 0*/ true) 
+    if (true) 
 #endif
     {
         f_detector = vec4(0.f.xxx, 1.f);
@@ -188,11 +179,13 @@ void main() {
         f_color *= texture(lightmap, lmcoord.xy);
 		f_normal = vec4(normal, 1.0);
         f_tangent = vec4(tangent.xyz, 1.f);
-		f_lightmap = texture(lightmap, lmcoord.xy);//vec4(lmcoord.xy, 0.0, 1.0);
-        
+		f_lightmap = texture(lightmap, lmcoord.xy);
+        f_texcoord = texcoord.st;
+        f_lmcoord = lmcoord.xy;
+
         f_normal.xyz = dot(f_normal.xyz.xyz, worldview.xyz) >= 0.f ? -f_normal.xyz : f_normal.xyz;
 
-        if (entity.x == 2.f) { f_color = color * vec4(0.f,0.f,0.f, 0.11f), f_detector = vec4(1.f.xxx, 1.f); }
+        if (entity.x == 2.f) { f_color = color * vec4(0.f,0.f,0.f, 1.f), f_detector = vec4(1.f.xxx, 1.f); }
         if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.99f) {
             f_planar = vec4(planar.xyz, 1.0f);
         }
@@ -217,6 +210,8 @@ void main() {
         f_color *= texture(lightmap, lmcoord.xy);
         f_normal = vec4(normal, 1.0);
         f_lightmap = vec4(lmcoord.xy, 0.0, 1.0);
+        f_texcoord = texcoord.st;
+        f_lmcoord = lmcoord.xy;
     #endif
 
     #ifdef OTHER
@@ -232,7 +227,7 @@ void main() {
 
 	}
 //#ifndef SKY
-    else { discard; };
+    else { f_color.a = 0.f; discard; };
 //#endif
 
     // finalize results
@@ -251,14 +246,25 @@ void main() {
 #endif
 
         // 
+        float enabled = 1.f;
+        if (f_color.a <= random(vec4(sslrpos.xyz, float(frameCounter)))) { 
+            f_detector = vec4(0.f.xxx, 0.f);
+            f_color = vec4(0.f.xxx, 0.f);
+            f_normal = vec4(0.f.xxx, 0.f);
+            f_tangent = vec4(0.f.xxx, 0.f);
+            f_lightmap = vec4(0.f.xxx, 0.f);
+            f_planar = vec4(0.f.xxx, 0.f);
+            enabled = 0.f;
+            discard;
+        } else {
+            f_color.w = 1.f;
+        }
+
+        // 
         gl_FragData[0] = f_color;
-        gl_FragData[1] = f_normal;
-        gl_FragData[2] = f_lightmap;
-        gl_FragData[3] = f_detector;
-        gl_FragData[4] = f_tangent;
-        gl_FragData[5] = vec4(0.f.xxxx);
-        gl_FragData[6] = vec4(0.f.xxxx);
-        gl_FragData[7] = f_planar;
+        gl_FragData[1] = vec4(pack2x3(mat2x3(f_normal.xyz, f_tangent.xyz)), enabled);
+        gl_FragData[2] = vec4(pack3x2(mat3x2(f_texcoord.xy, f_lmcoord.xy, vec2(0.f.xx))), enabled);
+        gl_FragData[3] = f_planar;
         gl_FragDepth = f_depth;
     };
 

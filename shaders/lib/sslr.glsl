@@ -1,9 +1,9 @@
 
-vec4 GetColorSSR(){
+vec4 GetColorRM(){
     return vec4(0.f);
 }
 
-float GetDepthSSR(in vec2 screenSpaceCoord, in int sceneId) {
+float GetDepthRM(in vec2 screenSpaceCoord, in int sceneId) {
     const vec2 txy = (screenSpaceCoord*0.5f+0.5f); // normalize screen space coordinates
     const vec4 txl = gatherLayer(depthtex0,txy,sceneId,0);
     const vec2 ttf = fract(txy*textureSize(depthtex0,0).xy-0.5f);
@@ -12,10 +12,9 @@ float GetDepthSSR(in vec2 screenSpaceCoord, in int sceneId) {
     return (dot(txl,vec4(i2[0],i2[1]).zwyx)); // interpolate
 }
 
-vec3 GetNormalSSR(in vec2 screenSpaceCoord, in int sceneId) {
+vec3 GetNormalRM(in vec2 screenSpaceCoord, in int sceneId) {
     const vec2 txy = (screenSpaceCoord*0.5f+0.5f);
-    const vec3 colp = fetchLayer(colortex1, ivec2(txy.xy*textureSize(colortex1,0).xy), sceneId).xyz;
-    return normalize(colp*2.f-1.f);
+    return sampleNormal(txy, sceneId);
 }
 
 vec3 divW(in vec4 origin) {
@@ -23,7 +22,7 @@ vec3 divW(in vec4 origin) {
 }
 
 // almost pixel-perfect screen space reflection 
-vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int sceneId, in bool filterDepth) {
+vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int sceneId, in bool filterDepth) {
 
     if (sceneId == REFLECTION_SCENE) {
         {   // needs reflect the reflection ray
@@ -63,12 +62,12 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in in
     for (int i=0;i<256;i++) { // do precise as possible 
         
         // 
-        if ((GetDepthSSR(screenSpaceOrigin.xy, sceneId)-1e-8f)<=screenSpaceOrigin.z) {
+        if ((GetDepthRM(screenSpaceOrigin.xy, sceneId)-1e-8f)<=screenSpaceOrigin.z) {
             vec3 screenSpaceOrigin = screenSpaceOrigin.xyz-screenSpaceDirection.xyz, screenSpaceDirection = screenSpaceDirection.xyz * 0.5f;
 
             // do refinements
             for (int j=0;j<16;j++) {
-                float ssdepth = GetDepthSSR(screenSpaceOrigin.xy, sceneId)-1e-8f;
+                float ssdepth = GetDepthRM(screenSpaceOrigin.xy, sceneId)-1e-8f;
                 if (ssdepth<=screenSpaceOrigin.z) {
                     screenSpaceOrigin -= screenSpaceDirection, screenSpaceDirection *= 0.5f;
                 } else {
@@ -80,15 +79,15 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in in
             }
 
             // 
-            const vec3 cameraNormal = GetNormalSSR(screenSpaceOrigin.xy, sceneId);
+            const vec3 cameraNormal = GetNormalRM(screenSpaceOrigin.xy, sceneId);
 
             // recalculate ray origin by normal 
-            const vec3 inPosition = ScreenSpaceToCameraSpace(vec4(screenSpaceOrigin.xy,GetDepthSSR(screenSpaceOrigin.xy, sceneId),1.f)).xyz;
+            const vec3 inPosition = ScreenSpaceToCameraSpace(vec4(screenSpaceOrigin.xy,GetDepthRM(screenSpaceOrigin.xy, sceneId),1.f)).xyz;
             const float dist = dot(inPosition.xyz-cameraSpaceOrigin,cameraNormal)/dot(cameraNormal,cameraSpaceDirection);
             screenSpaceOrigin = CameraSpaceToScreenSpace(vec4(cameraSpaceDirection*dist+cameraSpaceOrigin,1.f)).xyz;
 
             // check ray deviation 
-            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && dot(GetNormalSSR(screenSpaceOrigin.xy, sceneId),cameraNormal)>=0.5f && (!filterDepth || abs(GetDepthSSR(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<0.0001f)) {
+            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && dot(GetNormalRM(screenSpaceOrigin.xy, sceneId),cameraNormal)>=0.5f && (!filterDepth || abs(GetDepthRM(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<0.0001f)) {
                 finalOrigin.xyz = screenSpaceOrigin, finalOrigin.w = 1.f; break; // 
             }
 
