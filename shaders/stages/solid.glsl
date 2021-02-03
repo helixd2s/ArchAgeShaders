@@ -113,15 +113,12 @@ void main() {
 	gl_Position = gl_ProjectionMatrix * ModelSpaceToCameraSpace(planar);
     gl_FogFragCoord = length(camera.xyz);
     
-    
+    // 
+    { gl_Layer = DEFAULT_SCENE; };
     if (instanceId == 0) {
-        if (mc_Entity.x == 2.f) {
-            gl_Layer = 2;
-        } else {
-            gl_Layer = 0;
-        }
-    } else 
-    { gl_Layer = 1; };
+        if (mc_Entity.x == 2.f) { gl_Layer = WATER_SCENE; };
+    } 
+    if (instanceId == 1) { gl_Layer = REFLECTION_SCENE; };
 
     // 
     lmcoord = gl_TextureMatrix[1] * gl_MultiTexCoord1;

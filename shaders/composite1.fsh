@@ -70,7 +70,7 @@ bvec3 and(in bvec3 a, in bvec3 b) {
 
 // THIS IS WATER SHADER
 void main() {
-    if (layerId == 0) {
+    if (layerId == DEFAULT_SCENE) {
         ivec2  texcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
         ivec2 rtexcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
 

@@ -5,13 +5,19 @@ layout (location = 1) out flat int layerId;
 
 // 
 layout (triangles) in;
-layout (triangle_strip, max_vertices = 6) out;
+layout (triangle_strip, max_vertices = 24) out;
+
+#include "../lib/common.glsl"
+
+uniform samplerTyped colortex0;
 
 void main() {
-	for (int l=0;l<2;l++) {
+	int layerCount = int(textureSize(colortex0,0).z);
+	for (int l=0;l<layerCount;l++) {
 		for (int i=0;i<3;i++) {
 			gl_Position = gl_in[i].gl_Position;
-			gl_Layer = layerId = l;
+			gl_Layer = l;
+			layerId = l;
 			texcoord = texcoordIn[i];
 			EmitVertex();
 		};

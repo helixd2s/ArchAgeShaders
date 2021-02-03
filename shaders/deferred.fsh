@@ -45,6 +45,7 @@ layout (location = 1) in flat int layerId;
 // REQUIRED HACK PROGRAM
 
 void main() {
+    //discard;
     gl_FragData[0] = sampleLayer(colortex0, vtexcoord, layerId);
     gl_FragData[1] = sampleLayer(colortex1, vtexcoord, layerId);
     gl_FragData[2] = sampleLayer(colortex2, vtexcoord, layerId);
