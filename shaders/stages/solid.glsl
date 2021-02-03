@@ -97,9 +97,14 @@ void main() {
     gl_FogFragCoord = length(camera.xyz);
     
     //
+#ifdef TRANSLUCENT
+    int layerId_ = TRANSLUCENT_SCENE;
+#else
     int layerId_ = DEFAULT_SCENE;
+#endif
+
     if (instanceId == 0) {
-#if defined(WEATHER) || defined(HAND) || defined(BASIC)
+#if defined(WEATHER) || defined(HAND) || (defined(BASIC) && !defined(SKY))
         layerId_ = TRANSLUCENT_SCENE;
 #else
         if (mc_Entity.x == 3.f) { layerId_ = TRANSLUCENT_SCENE; };
@@ -247,6 +252,7 @@ void main() {
 
         // 
         float enabled = 1.f;
+#ifdef SOLID
         if (f_color.a <= random(vec4(sslrpos.xyz, float(frameCounter)))) { 
             f_detector = vec4(0.f.xxx, 0.f);
             f_color = vec4(0.f.xxx, 0.f);
@@ -259,6 +265,24 @@ void main() {
         } else {
             f_color.w = 1.f;
         }
+#else
+    #if defined(WEATHER) || defined(HAND) || (defined(BASIC) && !defined(SKY))
+        if (instanceId == 1) {
+            f_color.a = 0.f;
+        }
+    #endif
+
+        if (f_color.a <= 0.f) {
+            f_detector = vec4(0.f.xxx, 0.f);
+            f_color = vec4(0.f.xxx, 0.f);
+            f_normal = vec4(0.f.xxx, 0.f);
+            f_tangent = vec4(0.f.xxx, 0.f);
+            f_lightmap = vec4(0.f.xxx, 0.f);
+            f_planar = vec4(0.f.xxx, 0.f);
+            enabled = 0.f;
+            discard;
+        }
+#endif
 
         // 
         gl_FragData[0] = f_color;
