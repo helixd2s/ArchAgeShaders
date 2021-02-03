@@ -98,13 +98,28 @@ void main() {
             normal = mat3(tangent, bitangent, normal) * ntexture;
         }
 
-        vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)), REFLECTION_SCENE, false);
-        rtexcoord = ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight));
-        vec3 reflColor = fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).rgb;
-        if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { reflColor = skyColor*lightmapColor; };
+        /* // need another method
+        if (filterRefl > 0.999f) {
+            vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(refract(normalize(screenpos.xyz), normal, 1.f/1.333f)), DEFAULT_SCENE, false);
+            if (sslrpos.w > 0.f) {
+                sceneColor = fetchLayer(colortex0, ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight)), DEFAULT_SCENE).rgb;
+            }
+        }
+        */
 
-        // mix with ground 
-        gl_FragData[0] = vec4(mix(sceneColor, reflColor, filterRefl > 0.999f ? (0.1f + reflcoef*vec3(0.4f.xxx)) : vec3(0.f.xxx)), 1.0);
+        if (filterRefl > 0.999f) {
+            vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)), REFLECTION_SCENE, false);
+            rtexcoord = ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight));
+            vec3 reflColor = fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).rgb;
+            if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { reflColor = skyColor*lightmapColor; };
+
+            // mix with ground 
+            sceneColor = mix(sceneColor, reflColor, filterRefl > 0.999f ? (0.1f + reflcoef*vec3(0.4f.xxx)) : vec3(0.f.xxx));
+        }
+
+        
+
+        gl_FragData[0] = vec4(sceneColor, 1.f);
         
         //gl_FragData[0] = vec4(fetchLayer(colortex0, texcoord, REFLECTION_SCENE).rgb, 1.f);
     }

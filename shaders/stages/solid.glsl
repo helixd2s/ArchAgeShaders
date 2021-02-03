@@ -84,6 +84,7 @@ uniform sampler2D lightmap;	//the vanilla lightmap texture, basically useless wi
 #include "../lib/transforms.glsl"
 
 uniform samplerTyped gaux4;
+uniform samplerTyped depthtex0;
 
 uniform int fogMode;
 uniform float fogDensity;
@@ -174,7 +175,7 @@ void main() {
     float f_depth = 2.f;
 
 #ifndef SKY
-	if (planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) 
+	if ((planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) && (entity.x == 2.f ? sampleLayer(depthtex0, coordf, DEFAULT_SCENE).x >= sslrpos.z && instanceId == 0 : true)) 
 #else
     if (/*instanceId == 0*/ true) 
 #endif
