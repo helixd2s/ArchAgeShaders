@@ -180,6 +180,7 @@ void main() {
     if (/*instanceId == 0*/ true) 
 #endif
     {
+        f_detector = vec4(0.f.xxx, 1.f);
         f_depth = sslrpos.z;
 
     #ifdef SOLID //
