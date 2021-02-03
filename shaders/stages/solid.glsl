@@ -219,6 +219,11 @@ void main() {
         f_lmcoord = lmcoord.xy;
     #endif
 
+    // DISABLE RAINS!
+    #ifdef WEATHER
+        f_color.w = 0.f;
+    #endif
+
     #ifdef OTHER
         f_lightmap = vec4(vec3(gl_FragCoord.z), 1.0f);
     #endif
@@ -241,7 +246,10 @@ void main() {
         f_tangent.xyz = f_tangent.xyz * 0.5f + 0.5f;
 
 #if defined(TRANSLUCENT) || defined(HAND)
-        if (f_color.a <= 0.9999f) { // fix entity issues
+#ifndef PARTICLES
+        if (f_color.a <= 0.9999f) 
+#endif
+        { // fix entity issues
             f_color.rgb = pow(f_color.rgb, vec3(2.2f));
         }
 #endif

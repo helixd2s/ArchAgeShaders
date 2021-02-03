@@ -59,6 +59,7 @@ void main() {
         vec3 sceneColor = vec3(0.f.xxx);//sampleLayer(colortex0, vtexcoord, DEFAULT_SCENE).rgb;
         vec3 waterColor = sampleLayer(colortex0, vtexcoord, WATER_SCENE).rgb;
         float filterRefl = sampleLayer(colortex0, vtexcoord, WATER_SCENE).w > 0.f ? 1.f : 0.f;
+        if ( sceneDepth.x > 0.9999f ) { filterRefl = 0.f; };
 
         // 
         if (filterRefl > 0.999f) {

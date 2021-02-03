@@ -87,7 +87,7 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
             screenSpaceOrigin = CameraSpaceToScreenSpace(vec4(cameraSpaceDirection*dist+cameraSpaceOrigin,1.f)).xyz;
 
             // check ray deviation 
-            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && dot(GetNormalRM(screenSpaceOrigin.xy, sceneId),cameraNormal)>=0.5f && (!filterDepth || abs(GetDepthRM(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<0.0001f)) {
+            if (dot(cameraNormal,cameraSpaceDirection)<=0.f /*&& dot(GetNormalRM(screenSpaceOrigin.xy, sceneId),cameraNormal)>=0.5f*/ && (!filterDepth || abs(GetDepthRM(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<0.0001f)) {
                 finalOrigin.xyz = screenSpaceOrigin, finalOrigin.w = 1.f; break; // 
             }
 
@@ -96,7 +96,7 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
         };
 
         // check if origin gone from screen 
-        if (any(lessThanEqual(screenSpaceOrigin.xyz,vec3(-1.f.xx,-0.1f))) || any(greaterThan(screenSpaceOrigin.xyz,vec3(1.f.xx,1.1f.x)))) { break; };
+        if (any(lessThanEqual(screenSpaceOrigin.xyz,vec3(-1.f.xx,-0.1f))) || any(greaterThan(screenSpaceOrigin.xyz,vec3(1.f.xx,1.f.x)))) { break; };
 
         // 
         screenSpaceOrigin.xyz += screenSpaceDirection.xyz, screenSpaceDirection.xyz *= 1.f+(1.f/1024.f);
