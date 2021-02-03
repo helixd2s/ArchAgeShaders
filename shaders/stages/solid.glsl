@@ -245,6 +245,7 @@ void main() {
         f_normal.xyz = f_normal.xyz * 0.5f + 0.5f;
         f_tangent.xyz = f_tangent.xyz * 0.5f + 0.5f;
 
+#ifdef SOLID
 #if defined(TRANSLUCENT) || defined(HAND)
 #ifndef PARTICLES
         if (f_color.a <= 0.9999f) 
@@ -252,6 +253,7 @@ void main() {
         { // fix entity issues
             f_color.rgb = pow(f_color.rgb, vec3(2.2f));
         }
+#endif
 #endif
 
         // 

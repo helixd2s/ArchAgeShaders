@@ -54,17 +54,17 @@ void main() {
         float filterRefl = sampleLayer(colortex0, vtexcoord, WATER_SCENE).w;
 
         // 
-        if (groundDepth.x >= translucentDepth.x && sceneDepth.x < translucentDepth.x) {
+        if (groundDepth.x >= translucentDepth.x && sceneDepth.x <= translucentDepth.x && translucentDepth.x <= 0.9999f) {
             sceneColor = mix(sceneColor, transpColor, sampleLayer(colortex0, vtexcoord, TRANSLUCENT_SCENE).w);
         }
 
         // mix with ground 
-        if (groundDepth.x >= sceneDepth.x) {
+        if (groundDepth.x >= sceneDepth.x && sceneDepth.x <= 0.9999f) {
             sceneColor = mix(sceneColor, waterColor, filterRefl);
         }
 
         //
-        if (groundDepth.x >= translucentDepth.x && sceneDepth.x >= translucentDepth.x) {
+        if (groundDepth.x >= translucentDepth.x && sceneDepth.x >= translucentDepth.x && translucentDepth.x <= 0.9999f) {
             sceneColor = mix(sceneColor, transpColor, sampleLayer(colortex0, vtexcoord, TRANSLUCENT_SCENE).w);
         }
 
