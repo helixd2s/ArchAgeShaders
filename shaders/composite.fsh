@@ -46,12 +46,12 @@ layout (location = 1) in flat int layerId;
 
 void main() {
     //discard;
-    gl_FragData[0] = sampleLayer(colortex0, vtexcoord, layerId);
-    gl_FragData[1] = sampleLayer(colortex1, vtexcoord, layerId);
-    gl_FragData[2] = sampleLayer(colortex2, vtexcoord, layerId);
-    gl_FragData[3] = sampleLayer(colortex3, vtexcoord, layerId);
-    gl_FragData[4] = sampleLayer(colortex4, vtexcoord, layerId);
-    gl_FragData[5] = sampleLayer(colortex5, vtexcoord, layerId);
-    gl_FragData[6] = sampleLayer(colortex6, vtexcoord, layerId);
-    gl_FragData[7] = sampleLayer(colortex7, vtexcoord, layerId);
+    gl_FragData[0] = fetchLayer(colortex0, ivec2(gl_FragCoord.xy), layerId);
+    gl_FragData[1] = fetchLayer(colortex1, ivec2(gl_FragCoord.xy), layerId);
+    gl_FragData[2] = fetchLayer(colortex2, ivec2(gl_FragCoord.xy), layerId);
+    gl_FragData[3] = fetchLayer(colortex3, ivec2(gl_FragCoord.xy), layerId);
+    gl_FragData[4] = fetchLayer(colortex4, ivec2(gl_FragCoord.xy), layerId);
+    gl_FragData[5] = fetchLayer(colortex5, ivec2(gl_FragCoord.xy), layerId);
+    gl_FragData[6] = fetchLayer(colortex6, ivec2(gl_FragCoord.xy), layerId);
+    gl_FragData[7] = fetchLayer(colortex7, ivec2(gl_FragCoord.xy), layerId);
 }

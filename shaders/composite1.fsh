@@ -74,6 +74,7 @@ void main() {
         ivec2  texcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
         ivec2 rtexcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
 
+        vec3 groundDepth = fetchLayer(depthtex0, texcoord, DEFAULT_SCENE).xxx;
         vec3 sceneDepth = fetchLayer(depthtex0, texcoord, WATER_SCENE).xxx;
         vec3 screenpos 	= getScreenpos(sceneDepth.x, vtexcoord);
         vec3 worldpos   = toWorldpos(screenpos);
@@ -93,8 +94,9 @@ void main() {
 
         vec3 waterColor = fetchLayer(colortex0, texcoord, WATER_SCENE).rgb;
         float filterRefl = fetchLayer(colortex3, texcoord, WATER_SCENE).r;
+        
         if (filterRefl > 0.999f) {
-            vec3 ntexture = normalize(mix(get_water_normal(worldpos, 1.f, world_normal, world_tangent, world_bitangent).xzy, vec3(0.f,0.f,1.f), 0.95f));
+            vec3 ntexture = normalize(mix(get_water_normal(worldpos, 1.f, world_normal, world_tangent, world_bitangent).xzy, vec3(0.f,0.f,1.f), 0.96f));
             normal = mat3(tangent, bitangent, normal) * ntexture;
         }
 
@@ -107,14 +109,15 @@ void main() {
         }
         */
 
-        if (filterRefl > 0.999f) {
+        
+        if (filterRefl > 0.999f && groundDepth.x > sceneDepth.x) {
             vec4 sslrpos = EfficientSSR(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)), REFLECTION_SCENE, false);
             rtexcoord = ivec2((sslrpos.xy * 0.5f + 0.5f) * vec2(viewWidth, viewHeight));
             vec3 reflColor = fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).rgb;
             if (fetchLayer(colortex0, rtexcoord.xy, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { reflColor = skyColor*lightmapColor; };
 
             // mix with ground 
-            sceneColor = mix(sceneColor, reflColor, filterRefl > 0.999f ? (0.1f + reflcoef*vec3(0.4f.xxx)) : vec3(0.f.xxx));
+            sceneColor = mix(sceneColor, reflColor, filterRefl > 0.999f ? (0.2f + reflcoef*vec3(0.4f.xxx)) : vec3(0.f.xxx));
         }
 
         

@@ -35,15 +35,13 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in in
         {   // needs to correct plane of those SSLR
             const float height = sampleLayer(colortex7, vec2(0.5f, 0.5f), WATER_SCENE).y;
             vec4 WSP = CameraSpaceToModelSpace(vec4(cameraSpaceOrigin, 1.f));
-            WSP /= WSP.w;
             
-            // cameraPosition or matrices IS INCORRECT!
+            WSP /= WSP.w;
             WSP.y += cameraPosition.y;
             WSP.y -= height;
             WSP.y *= -1.f;
             WSP.y += height;
             WSP.y -= cameraPosition.y;
-            
             
             cameraSpaceOrigin = divW(ModelSpaceToCameraSpace(WSP));
         };
@@ -64,9 +62,6 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in in
     screenSpaceOrigin.xyz += screenSpaceDirection.xyz*0.0625f;
     for (int i=0;i<256;i++) { // do precise as possible 
         
-        // check if origin gone from screen 
-        if (any(lessThanEqual(screenSpaceOrigin.xyz,vec3(-1.f.xx,-0.1f))) || any(greaterThan(screenSpaceOrigin.xyz,vec3(1.f.xx,1.1f.x)))) { break; };
-
         // 
         if ((GetDepthSSR(screenSpaceOrigin.xy, sceneId)-1e-8f)<=screenSpaceOrigin.z) {
             vec3 screenSpaceOrigin = screenSpaceOrigin.xyz-screenSpaceDirection.xyz, screenSpaceDirection = screenSpaceDirection.xyz * 0.5f;
@@ -99,7 +94,10 @@ vec4 EfficientSSR(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in in
 
             // use fast reflections
             break;
-        }
+        };
+
+        // check if origin gone from screen 
+        if (any(lessThanEqual(screenSpaceOrigin.xyz,vec3(-1.f.xx,-0.1f))) || any(greaterThan(screenSpaceOrigin.xyz,vec3(1.f.xx,1.1f.x)))) { break; };
 
         // 
         screenSpaceOrigin.xyz += screenSpaceDirection.xyz, screenSpaceDirection.xyz *= 1.f+(1.f/1024.f);

@@ -54,4 +54,7 @@ void main() {
     gl_FragData[5] = fetchLayer(colortex5, ivec2(gl_FragCoord.xy), layerId);
     gl_FragData[6] = fetchLayer(colortex6, ivec2(gl_FragCoord.xy), layerId);
     gl_FragData[7] = fetchLayer(colortex7, ivec2(gl_FragCoord.xy), layerId);
+
+    // use linear colors
+    gl_FragData[0].rgb = pow(gl_FragData[0].rgb, 2.2f.xxx);
 }
