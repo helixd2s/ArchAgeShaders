@@ -142,8 +142,8 @@ void main() {
 #ifndef USE_SPLIT_SCREEN
 	coordf.xy /= vec2(viewWidth, viewHeight);
 #else
+    coordf.xy -= splitArea[layerId].xy * vec2(viewWidth, viewHeight);
     coordf.xy /= vec2(viewWidth, viewHeight) * (splitArea[layerId].zw - splitArea[layerId].xy);
-    coordf.xy -= splitArea[layerId].xy / (splitArea[layerId].zw - splitArea[layerId].xy);
 #endif
 
     // 
