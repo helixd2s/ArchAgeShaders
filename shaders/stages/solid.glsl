@@ -196,7 +196,7 @@ void main() {
         f_normal.xyz = dot(f_normal.xyz.xyz, worldview.xyz) >= 0.f ? -f_normal.xyz : f_normal.xyz;
 
         if (entity.x == 2.f) { f_color = color * vec4(0.f,0.f,0.f, 1.f), f_detector = vec4(1.f.xxx, 1.f); }
-        if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.99f) {
+        if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.999f) {
             f_planar = vec4(planar.xyz, 1.0f);
         }
     #endif
@@ -211,6 +211,9 @@ void main() {
         f_lightmap.xy = lmcoord.xy;
         f_texcoord.xy = texcoord.xy;
 		f_depth = sslrpos.z;
+
+        // disabled clouds
+        f_color.a = 0.f;
     #endif
 
     #if defined(OTHER) || defined(SKY)

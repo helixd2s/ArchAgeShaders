@@ -71,15 +71,16 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
 
         // 
         if ((GetDepthRM(screenSpaceOrigin.xy, sceneId)-1e-8f)<=screenSpaceOrigin.z) {
-            vec3 screenSpaceOrigin = screenSpaceOrigin.xyz-screenSpaceDirection.xyz, screenSpaceDirection = screenSpaceDirection.xyz * 0.5f;
+            vec3 screenSpaceOrigin = screenSpaceOrigin.xyz-screenSpaceDirection.xyz;
+            vec3 screenSpaceDirection = screenSpaceDirection.xyz * 0.5f;
 
             // do refinements
-            for (int j=0;j<16;j++) {
+            for (int j=0;j<8;j++) {
                 float ssdepth = GetDepthRM(screenSpaceOrigin.xy, sceneId)-1e-8f;
                 if (ssdepth<=screenSpaceOrigin.z) {
-                    screenSpaceOrigin -= screenSpaceDirection, screenSpaceDirection *= 0.5f;
+                    screenSpaceOrigin.xyz -= screenSpaceDirection.xyz, screenSpaceDirection.xyz *= 0.5f;
                 } else {
-                    screenSpaceOrigin += screenSpaceDirection;
+                    screenSpaceOrigin.xyz += screenSpaceDirection.xyz;
                 }
 
                 // if too small distance, then break
@@ -87,16 +88,18 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
             }
 
             // 
-            const vec3 cameraNormal = GetNormalRM(screenSpaceOrigin.xy, sceneId);
+            vec3 cameraNormal = GetNormalRM(screenSpaceOrigin.xy, sceneId);
 
             // recalculate ray origin by normal 
             const vec3 inPosition = ScreenSpaceToCameraSpace(vec4(screenSpaceOrigin.xy,GetDepthRM(screenSpaceOrigin.xy, sceneId),1.f)).xyz;
             const float dist = dot(inPosition.xyz-cameraSpaceOrigin,cameraNormal)/dot(cameraNormal,cameraSpaceDirection);
-            screenSpaceOrigin = CameraSpaceToScreenSpace(vec4(cameraSpaceDirection*dist+cameraSpaceOrigin,1.f)).xyz;
+            screenSpaceOrigin.xyz = CameraSpaceToScreenSpace(vec4(cameraSpaceDirection*dist+cameraSpaceOrigin,1.f)).xyz;
+            cameraNormal = GetNormalRM(screenSpaceOrigin.xy, sceneId);
 
             // check ray deviation 
-            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && (!filterDepth || abs(GetDepthRM(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<0.0001f && dot(GetNormalRM(screenSpaceOrigin.xy, sceneId),cameraNormal)>=0.5f)) {
-                finalOrigin.xyz = screenSpaceOrigin, finalOrigin.w = 1.f; break; // 
+            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && abs(GetDepthRM(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<(filterDepth ? 0.0002f : 0.001f) && 
+            screenSpaceOrigin.x >= -1.f && screenSpaceOrigin.x < 1.f && screenSpaceOrigin.y >= -1.f && screenSpaceOrigin.y < 1.f) {
+                finalOrigin.xyz = screenSpaceOrigin.xyz, finalOrigin.w = 1.f; break; // 
             }
 
             // use fast reflections
