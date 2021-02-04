@@ -12,13 +12,18 @@ layout (triangle_strip, max_vertices = 24) out;
 uniform samplerTyped colortex0;
 
 void main() {
+#ifndef USE_SPLIT_SCREEN
 	int layerCount = int(textureSize(colortex0,0).z);
+#else
+	int layerCount = 4;
+#endif
 	for (int l=0;l<layerCount;l++) {
 		for (int i=0;i<3;i++) {
 			gl_Position = gl_in[i].gl_Position;
-			gl_Layer = l;
 			layerId = l;
 			texcoord = texcoordIn[i];
+
+			SetLayer(gl_Position, gl_Layer, l);
 			EmitVertex();
 		};
 		EndPrimitive();

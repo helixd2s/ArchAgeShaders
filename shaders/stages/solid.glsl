@@ -72,6 +72,8 @@ uniform int fogMode;
 uniform float fogDensity;
 uniform vec3 fogColor; 
 
+
+
 void main() {
 #ifdef VERTEX_SHADER
 	texcoord = gl_TextureMatrix[0] * gl_MultiTexCoord0;
@@ -113,11 +115,6 @@ void main() {
     };
     if (instanceId == 1) { layerId_ = REFLECTION_SCENE; };
 
-    
-
-    
-    gl_Layer = layerId_;
-
     // 
     lmcoord = gl_TextureMatrix[1] * gl_MultiTexCoord1;
 	color = gl_Color;
@@ -133,12 +130,21 @@ void main() {
     entity = mc_Entity;
     entity.w = intBitsToFloat(layerId_);
     tangent = ( vec4(at_tangent.xyz, 0.f));
+
+    // set where needs to draw
+    SetLayer(gl_Position, gl_Layer, layerId);
 #endif
 
 #ifdef FRAGMENT_SHADER
 	// sado guru algorithm
 	vec2 coordf = gl_FragCoord.xy;// * gl_FragCoord.w;
+
+#ifndef USE_SPLIT_SCREEN
 	coordf.xy /= vec2(viewWidth, viewHeight);
+#else
+    coordf.xy /= vec2(viewWidth, viewHeight) * (splitArea[layerId].zw - splitArea[layerId].xy);
+    coordf.xy -= splitArea[layerId].xy / (splitArea[layerId].zw - splitArea[layerId].xy);
+#endif
 
     // 
     vec4 sslrpos = vec4(coordf * 2.f - 1.f, gl_FragCoord.z*2.f-1.f, 1.f);
@@ -171,9 +177,9 @@ void main() {
 
 #ifndef SKY
 	//if ((planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) && ((entity.x == 2.f || entity.x == 3.f) && instanceId == 0 ? sampleLayer(depthtex0, coordf, instanceId == 1 ? REFLECTION_SCENE : DEFAULT_SCENE).x >= sslrpos.z && instanceId == 0 : true)) 
-    if ((planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) && ((entity.x == 2.f || entity.x == 3.f) ? sampleLayer(depthtex0, coordf, instanceId == 1 ? REFLECTION_SCENE : DEFAULT_SCENE).x >= sslrpos.z && instanceId == 0 : true)) 
+    if (checkArea(coordf) && ((planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) && ((entity.x == 2.f || entity.x == 3.f) ? sampleLayer(depthtex0, coordf, instanceId == 1 ? REFLECTION_SCENE : DEFAULT_SCENE).x >= sslrpos.z && instanceId == 0 : true))) 
 #else
-    if (true) 
+    if (checkArea(coordf)) 
 #endif
     {
         f_detector = vec4(0.f.xxx, 1.f);

@@ -21,8 +21,13 @@ uniform samplerTyped colortex6;
 uniform samplerTyped colortex7;
 
 mat2x3 sampleUnpack(in samplerTyped samplr, in vec2 texcoord, in int sceneId) {
+#ifndef USE_SPLIT_SCREEN
     ivec2 tcoord = ivec2(floor(texcoord * vec2(viewWidth, viewHeight)));
     vec3 pckg = fetchLayer(samplr, tcoord, sceneId).xyz;
+#else
+    ivec2 tcoord = ivec2(floor(convertArea(texcoord, sceneId) * vec2(viewWidth, viewHeight)));
+    vec3 pckg = texelFetch(samplr, tcoord, 0).xyz;
+#endif
     return unpack2x3(pckg);
 }
 

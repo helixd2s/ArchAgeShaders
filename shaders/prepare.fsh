@@ -23,7 +23,7 @@ void main() {
     if (layerId == REFLECTION_SCENE) { gl_FragData[0] = vec4(skyColor, 1.f); };
 
     // 
-    vec4 planeLevel = fetchLayer(colortex7, ivec2(gl_FragCoord.xy), layerId);
+    vec4 planeLevel = sampleLayer(colortex7, vtexcoord, layerId);
 	if (planeLevel.y <= 0.f) {
         gl_FragData[3] = vec4(0.f, 63.f - 2.f/16.f, 0.f, 1.f);
     } else 

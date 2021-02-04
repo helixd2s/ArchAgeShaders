@@ -53,7 +53,12 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
     screenSpaceDirection.xyz = normalize(screenSpaceDirection.xyz);
 
     // 
+#ifndef USE_SPLIT_SCREEN
     const vec2 screenSpaceDirSize = abs(screenSpaceDirection.xy*vec2(viewWidth,viewHeight));
+#else
+    const vec2 screenSpaceDirSize = abs(screenSpaceDirection.xy*vec2(viewWidth,viewHeight)*(splitArea[sceneId].zw - splitArea[sceneId].xy));
+#endif
+
     screenSpaceDirection.xyz /= max(screenSpaceDirSize.x,screenSpaceDirSize.y)*(1.f/16.f); // half of image size
 
     // 

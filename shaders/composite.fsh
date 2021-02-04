@@ -16,9 +16,15 @@ layout (location = 1) in flat int layerId;
 // REQUIRED HACK PROGRAM
 
 void main() {
-    //discard;
+#ifndef USE_SPLIT_SCREEN
     gl_FragData[0] = fetchLayer(colortex0, ivec2(gl_FragCoord.xy), layerId);
     gl_FragData[1] = fetchLayer(colortex1, ivec2(gl_FragCoord.xy), layerId);
     gl_FragData[2] = fetchLayer(colortex2, ivec2(gl_FragCoord.xy), layerId);
     gl_FragData[3] = fetchLayer(colortex7, ivec2(gl_FragCoord.xy), layerId);
+#else
+    gl_FragData[0] = texelFetch(colortex0, ivec2(gl_FragCoord.xy), 0);
+    gl_FragData[1] = texelFetch(colortex1, ivec2(gl_FragCoord.xy), 0);
+    gl_FragData[2] = texelFetch(colortex2, ivec2(gl_FragCoord.xy), 0);
+    gl_FragData[3] = texelFetch(colortex7, ivec2(gl_FragCoord.xy), 0);
+#endif
 }
