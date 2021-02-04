@@ -27,10 +27,6 @@ uniform mat4 shadowModelView;
 
 /*DRAWBUFFERS:0*/
 
-bvec3 and(in bvec3 a, in bvec3 b) {
-    return bvec3(a.x&&b.x, a.y&&b.y, a.z&&b.z);
-}
-
 // THIS IS WATER SHADER
 void main() {
 

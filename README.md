@@ -1,4 +1,4 @@
-# Optifine Water Shader
+# Simplex 2 (alpha)
 
 How made Optifine, so I made those reflections. I will no support that piece of sheat such as Optifine. 
 

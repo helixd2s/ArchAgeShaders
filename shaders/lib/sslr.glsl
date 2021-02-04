@@ -5,8 +5,23 @@ vec4 GetColorRM(){
 
 float GetDepthRM(in vec2 screenSpaceCoord, in int sceneId) {
     const vec2 txy = (screenSpaceCoord*0.5f+0.5f); // normalize screen space coordinates
+    const vec2 txs = textureSize(depthtex0,0).xy;
+#ifdef USE_SPLIT_SCREEN
+    const vec2 mps = (splitArea[sceneId].zw - splitArea[sceneId].xy);
+#else
+    const vec2 mps = 1.f.xx;
+#endif
+    const vec2 hpx = 0.5f/(txs.xy*mps);
+    const vec2 hpm = 0.5f/(txs.xy);
     const vec4 txl = gatherLayer(depthtex0,txy,sceneId,0);
-    const vec2 ttf = fract(txy*textureSize(depthtex0,0).xy-0.5f);
+
+    // de-centralize texcoord
+    //vec2 ttx = txy;
+    //ttx = clamp(ttx, hpx-0.0001f, 1.f-hpx+0.0001f);
+    //ttx = convertArea(ttx-hpx, sceneId);
+
+    // linear interpolation
+    const vec2 ttf = fract(txs*mps*txy);
     const vec2 px = vec2(1.f-ttf.x,ttf.x), py = vec2(1.f-ttf.y,ttf.y);
     const mat2x2 i2 = outerProduct(px,py);
     return (dot(txl,vec4(i2[0],i2[1]).zwyx)); // interpolate
@@ -17,12 +32,21 @@ vec3 GetNormalRM(in vec2 screenSpaceCoord, in int sceneId) {
     return sampleNormal(txy, sceneId);
 }
 
-vec3 divW(in vec4 origin) {
-    return origin.xyz / origin.w;
-}
+
 
 // almost pixel-perfect screen space reflection 
 vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int sceneId, in bool filterDepth) {
+
+    const vec2 txs = textureSize(depthtex0,0).xy;
+#ifdef USE_SPLIT_SCREEN
+    const vec2 mps = (splitArea[sceneId].zw - splitArea[sceneId].xy);
+#else
+    const vec2 mps = 1.f.xx;
+#endif
+    const vec2 hpx = 0.5f/(txs.xy*mps);
+    const vec2 hpm = 0.5f/(txs.xy);
+
+    
 
     if (sceneId == REFLECTION_SCENE) {
         {   // needs reflect the reflection ray
@@ -65,7 +89,7 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
     vec4 finalOrigin = vec4(/*screenSpaceOrigin.xyz*/0.f.xxx,0.f);
     screenSpaceOrigin.xyz += screenSpaceDirection.xyz*0.0625f;
     for (int i=0;i<256;i++) { // do precise as possible 
-        
+
         // 
         if ((GetDepthRM(screenSpaceOrigin.xy, sceneId)-1e-8f)<=screenSpaceOrigin.z) {
             vec3 screenSpaceOrigin = screenSpaceOrigin.xyz-screenSpaceDirection.xyz, screenSpaceDirection = screenSpaceDirection.xyz * 0.5f;
@@ -92,13 +116,13 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
             screenSpaceOrigin = CameraSpaceToScreenSpace(vec4(cameraSpaceDirection*dist+cameraSpaceOrigin,1.f)).xyz;
 
             // check ray deviation 
-            if (dot(cameraNormal,cameraSpaceDirection)<=0.f /*&& dot(GetNormalRM(screenSpaceOrigin.xy, sceneId),cameraNormal)>=0.5f*/ && (!filterDepth || abs(GetDepthRM(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<0.0001f)) {
+            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && (!filterDepth || abs(GetDepthRM(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<0.0001f && dot(GetNormalRM(screenSpaceOrigin.xy, sceneId),cameraNormal)>=0.5f)) {
                 finalOrigin.xyz = screenSpaceOrigin, finalOrigin.w = 1.f; break; // 
             }
 
             // use fast reflections
             break;
-        };
+        }
 
         // check if origin gone from screen 
         if (any(lessThanEqual(screenSpaceOrigin.xyz,vec3(-1.f.xx,-0.1f))) || any(greaterThan(screenSpaceOrigin.xyz,vec3(1.f.xx,1.f.x)))) { break; };

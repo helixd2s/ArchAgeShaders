@@ -25,7 +25,16 @@ mat2x3 sampleUnpack(in samplerTyped samplr, in vec2 texcoord, in int sceneId) {
     ivec2 tcoord = ivec2(floor(texcoord * vec2(viewWidth, viewHeight)));
     vec3 pckg = fetchLayer(samplr, tcoord, sceneId).xyz;
 #else
-    ivec2 tcoord = ivec2(floor(convertArea(texcoord, sceneId) * vec2(viewWidth, viewHeight)));
+    vec3 size = vec3(textureSize(samplr, 0), 1.f);
+    vec2 mps = (splitArea[sceneId].zw - splitArea[sceneId].xy);
+    vec2 hpx = 0.5f/(size.xy*mps);
+    vec2 hpm = 0.5f/(size.xy);
+
+    // de-centralize texcoords
+    texcoord = clamp(texcoord, hpx-0.0001f, 1.f-hpx+0.0001f);
+    texcoord = convertArea(texcoord-hpx, sceneId)+hpm;
+
+    ivec2 tcoord = ivec2(floor(texcoord * vec2(viewWidth, viewHeight)));
     vec3 pckg = texelFetch(samplr, tcoord, 0).xyz;
 #endif
     return unpack2x3(pckg);

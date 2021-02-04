@@ -127,6 +127,12 @@ vec4 splitArea[4] = {
     vec4(0.f, 0.5f, 0.5f, 1.0f), vec4(0.5f, 0.5f, 1.0f, 1.0f)
 };
 
+vec2 convertUnit(in vec2 xy, in int area) {
+    xy.xy -= splitArea[area].xy;
+    xy.xy /= (splitArea[area].zw - splitArea[area].xy);
+    return xy;
+}
+
 vec2 convertArea(in vec2 xy, in int area) {
     xy.xy *= (splitArea[area].zw - splitArea[area].xy);
     xy.xy += splitArea[area].xy;
@@ -146,18 +152,34 @@ vec4 convertAreaNDC(in vec4 coord, in int area) {
 // 
 vec4 sampleLayer(in sampler2D smplr, in vec2 texcoord, in int layer) {
     vec3 size = vec3(textureSize(smplr, 0), 1.f);
-    vec2 hpx = 0.5f/size.xy;
-    return texture(smplr, convertArea(clamp(texcoord, hpx-0.0001f, 1.f-hpx+0.0001f), layer), 0);
+    vec2 mps = (splitArea[layer].zw - splitArea[layer].xy);
+    vec2 hpx = 0.5f/(size.xy*mps);
+    vec2 hpm = 0.5f/(size.xy);
+
+    // de-centralize pixel
+    texcoord = clamp(texcoord, hpx-0.0001f, 1.f-hpx+0.0001f);
+    texcoord = convertArea(texcoord-hpx, layer)+hpm;
+    //texcoord = (ceil(convertArea(texcoord-hpx, layer)*size.xy)+0.5f)/size.xy;
+
+    return texture(smplr, texcoord, 0);
 }
 
 // 
 vec4 gatherLayer(in sampler2D smplr, in vec2 texcoord, in int layer, const int component) {
     vec3 size = vec3(textureSize(smplr, 0), 1.f);
-    vec2 hpx = 0.5f/size.xy;
-    if (component == 0) { return textureGather(smplr, convertArea(clamp(texcoord, hpx-0.0001f, 1.f-hpx+0.0001f), layer), 0); };
-    if (component == 1) { return textureGather(smplr, convertArea(clamp(texcoord, hpx-0.0001f, 1.f-hpx+0.0001f), layer), 1); };
-    if (component == 2) { return textureGather(smplr, convertArea(clamp(texcoord, hpx-0.0001f, 1.f-hpx+0.0001f), layer), 2); };
-    if (component == 3) { return textureGather(smplr, convertArea(clamp(texcoord, hpx-0.0001f, 1.f-hpx+0.0001f), layer), 3); };
+    vec2 mps = (splitArea[layer].zw - splitArea[layer].xy);
+    vec2 hpx = 0.5f/(size.xy*mps);
+    vec2 hpm = 0.5f/(size.xy);
+
+    // de-centralize pixel
+    texcoord = clamp(texcoord, hpx-0.0001f, 1.f-hpx+0.0001f);
+    texcoord = convertArea(texcoord-hpx, layer)+hpm;
+    //texcoord = (ceil(convertArea(texcoord-hpx, layer)*size.xy)+0.5f)/size.xy;
+
+    if (component == 0) { return textureGather(smplr, texcoord, 0); };
+    if (component == 1) { return textureGather(smplr, texcoord, 1); };
+    if (component == 2) { return textureGather(smplr, texcoord, 2); };
+    if (component == 3) { return textureGather(smplr, texcoord, 3); };
     return vec4(0.f.xxxx);
 }
 
@@ -180,3 +202,13 @@ void SetLayer(inout vec4 position, inout int toChange, in int layerId_) {
 #endif
 }
 #endif
+
+// 
+bvec3 and(in bvec3 a, in bvec3 b) {
+    return bvec3(a.x&&b.x, a.y&&b.y, a.z&&b.z);
+}
+
+// 
+vec3 divW(in vec4 origin) {
+    return origin.xyz / origin.w;
+}

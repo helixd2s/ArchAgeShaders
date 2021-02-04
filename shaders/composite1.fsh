@@ -27,9 +27,7 @@ uniform mat4 shadowModelView;
 
 /*DRAWBUFFERS:0*/
 
-bvec3 and(in bvec3 a, in bvec3 b) {
-    return bvec3(a.x&&b.x, a.y&&b.y, a.z&&b.z);
-}
+
 
 // THIS IS WATER SHADER
 void main() {
@@ -54,7 +52,7 @@ void main() {
         vec3 world_tangent = mat3(gbufferModelViewInverse) * tangent;
         vec3 world_normal = mat3(gbufferModelViewInverse) * normal;
         float reflcoef  = 1.f - abs(dot(normalize(screenpos), normal));
-        
+
         // 
         vec3 sceneColor = vec3(0.f.xxx);//sampleLayer(colortex0, vtexcoord, DEFAULT_SCENE).rgb;
         vec3 waterColor = sampleLayer(colortex0, vtexcoord, WATER_SCENE).rgb;
@@ -69,9 +67,16 @@ void main() {
 
         // make reflection as water color
         if (filterRefl > 0.999f) {
-            vec4 sslrpos = EfficientRM(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)), REFLECTION_SCENE, false);
-            vec3 reflColor = sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, REFLECTION_SCENE).rgb;
-            if (sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { reflColor = skyColor; };
+            // nested SSLR from main scene (fallback)
+            vec4 sslrpos = EfficientRM(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)), DEFAULT_SCENE, true);
+            vec3 reflColor = sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, DEFAULT_SCENE).rgb;
+            if (sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, DEFAULT_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) {
+                vec4 sslrpos = EfficientRM(screenpos.xyz, normalize(reflect(normalize(screenpos.xyz), normal)), REFLECTION_SCENE, false);
+                reflColor = sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, REFLECTION_SCENE).rgb;
+                if (sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { 
+                    reflColor = skyColor;
+                }
+            }
             sceneColor = reflColor;
         }
 
@@ -80,5 +85,5 @@ void main() {
         discard;
     }
 
-    
+
 }

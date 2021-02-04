@@ -79,7 +79,7 @@ void main() {
 	texcoord = gl_TextureMatrix[0] * gl_MultiTexCoord0;
     vec4 camera = gl_ModelViewMatrix * gl_Vertex;
     vec4 planar = CameraSpaceToModelSpace(camera);
-    
+
     // planar reflected
     const float height = sampleLayer(gaux4, vec2(0.5f, 0.5f), WATER_SCENE).y;
     if (instanceId == 1) {
@@ -97,7 +97,7 @@ void main() {
     // 
 	gl_Position = gl_ProjectionMatrix * ModelSpaceToCameraSpace(planar);
     gl_FogFragCoord = length(camera.xyz);
-    
+
     //
 #ifdef TRANSLUCENT
     int layerId_ = TRANSLUCENT_SCENE;
@@ -106,7 +106,7 @@ void main() {
 #endif
 
     if (instanceId == 0) {
-#if defined(WEATHER) || defined(HAND) || (defined(BASIC) && !defined(SKY))
+#if defined(WEATHER) || defined(HAND) || (defined(BASIC) && !defined(SKY)) || defined(CLOUDS)
         layerId_ = TRANSLUCENT_SCENE;
 #else
         if (mc_Entity.x == 3.f) { layerId_ = TRANSLUCENT_SCENE; };
@@ -142,8 +142,7 @@ void main() {
 #ifndef USE_SPLIT_SCREEN
 	coordf.xy /= vec2(viewWidth, viewHeight);
 #else
-    coordf.xy -= splitArea[layerId].xy * vec2(viewWidth, viewHeight);
-    coordf.xy /= vec2(viewWidth, viewHeight) * (splitArea[layerId].zw - splitArea[layerId].xy);
+    coordf.xy = convertUnit(coordf.xy / vec2(viewWidth, viewHeight), layerId);
 #endif
 
     // 
@@ -176,7 +175,7 @@ void main() {
     float f_depth = 2.f;
 
 #ifndef SKY
-	//if ((planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) && ((entity.x == 2.f || entity.x == 3.f) && instanceId == 0 ? sampleLayer(depthtex0, coordf, instanceId == 1 ? REFLECTION_SCENE : DEFAULT_SCENE).x >= sslrpos.z && instanceId == 0 : true)) 
+    //if (checkArea(coordf))
     if (checkArea(coordf) && ((planar.y <= (height - 0.001f) && instanceId == 1 || instanceId == 0 && normalCorrect) && ((entity.x == 2.f || entity.x == 3.f) ? sampleLayer(depthtex0, coordf, instanceId == 1 ? REFLECTION_SCENE : DEFAULT_SCENE).x >= sslrpos.z && instanceId == 0 : true))) 
 #else
     if (checkArea(coordf)) 
@@ -200,6 +199,18 @@ void main() {
         if (entity.x == 2.f && dot(normalize((gbufferModelViewInverse * vec4(normal.xyz, 0.f)).xyz), vec3(0.f, 1.f, 0.f)) >= 0.99f) {
             f_planar = vec4(planar.xyz, 1.0f);
         }
+    #endif
+
+    // FIXED
+    #ifdef CLOUDS
+		f_color = texture(tex, texcoord.xy) * color;
+        f_color *= texture(lightmap, lmcoord.xy);
+        f_lightmap = texture(lightmap, lmcoord.xy);
+		f_normal = vec4(normal, 1.0);
+        f_tangent = vec4(tangent.xyz, 1.f);
+        f_lightmap.xy = lmcoord.xy;
+        f_texcoord.xy = texcoord.xy;
+		f_depth = sslrpos.z;
     #endif
 
     #if defined(OTHER) || defined(SKY)
@@ -264,7 +275,7 @@ void main() {
 
         // 
         float enabled = 1.f;
-#ifdef SOLID
+#if defined(SOLID) || defined(CLOUDS)
         if (f_color.a <= random(vec4(sslrpos.xyz, float(frameCounter)))) { 
             f_detector = vec4(0.f.xxx, 0.f);
             f_color = vec4(0.f.xxx, 0.f);
