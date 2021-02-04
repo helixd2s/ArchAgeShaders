@@ -68,6 +68,16 @@ vec4 fetchLayer(in sampler2DArray smplr, in ivec2 texcoord, in int layer) {
     return texelFetch(smplr, ivec3(texcoord, layer), 0);
 }
 
+//
+float sampleLinear(in sampler2DArray smplr, in vec2 txy, in int layer) {
+    const vec3 txs = textureSize(smplr, 0);
+    const vec4 txl = textureGather(smplr, vec3(txy, float(layer)), 0);
+    const vec2 ttf = fract(txy*txs.xy-0.5f);
+    const vec2 px = vec2(1.f-ttf.x,ttf.x), py = vec2(1.f-ttf.y,ttf.y);
+    const mat2x2 i2 = outerProduct(px,py);
+    return (dot(txl,vec4(i2[0],i2[1]).zwyx)); // interpolate
+}
+
 
 // 
 #ifndef USE_SPLIT_SCREEN
@@ -119,6 +129,17 @@ vec4 fetchLayer(in sampler2D smplr, in ivec2 texcoord, in int layer) {
     ivec3 size = ivec3(textureSize(smplr, 0), 1);
     return texelFetch(smplr, texcoord, 0);
 }
+
+//
+float sampleLinear(in sampler2D smplr, in vec2 txy, in int layer) {
+    const vec2 txs = textureSize(smplr,0).xy;
+    const vec4 txl = textureGather(smplr, txy, 0);
+    const vec2 ttf = fract(txy*txs-0.5f);
+    const vec2 px = vec2(1.f-ttf.x,ttf.x), py = vec2(1.f-ttf.y,ttf.y);
+    const mat2x2 i2 = outerProduct(px,py);
+    return (dot(txl,vec4(i2[0],i2[1]).zwyx)); // interpolate
+}
+
 #else
 
 // in format [-1, 1]
@@ -188,6 +209,25 @@ vec4 fetchLayer(in sampler2D smplr, in ivec2 texcoord, in int layer) {
     ivec3 size = ivec3(textureSize(smplr, 0), 1);
     texcoord += ivec2(splitArea[layer].xy * vec2(size.xy));
     return texelFetch(smplr, texcoord, 0);
+}
+
+// 
+float sampleLinear(in sampler2D smplr, in vec2 txy, in int layer) {
+    const vec2 txs = textureSize(smplr,0).xy;
+    const vec2 mps = (splitArea[layer].zw - splitArea[layer].xy);
+    const vec2 hpx = 0.5f/(txs.xy*mps);
+    const vec2 hpm = 0.5f/(txs.xy);
+
+    // de-centralize pixel
+    txy = clamp(txy, hpx-0.0001f, 1.f-hpx+0.0001f);
+    txy = convertArea(txy-hpx, layer)+hpm;
+
+    // 
+    const vec4 txl = textureGather(smplr, txy, 0);
+    const vec2 ttf = fract(txy*txs-0.5f);
+    const vec2 px = vec2(1.f-ttf.x,ttf.x), py = vec2(1.f-ttf.y,ttf.y);
+    const mat2x2 i2 = outerProduct(px,py);
+    return (dot(txl,vec4(i2[0],i2[1]).zwyx)); // interpolate
 }
 #endif
 
