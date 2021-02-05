@@ -67,6 +67,8 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
     // 
     vec4 finalOrigin = vec4(/*screenSpaceOrigin.xyz*/0.f.xxx,0.f);
     screenSpaceOrigin.xyz += screenSpaceDirection.xyz*0.0625f;
+
+    // PLANNED HI-Z SCREEN SPACE REFLECTIONS
     for (int i=0;i<256;i++) { // do precise as possible 
 
         // 
@@ -74,29 +76,31 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
             vec3 screenSpaceOrigin = screenSpaceOrigin.xyz-screenSpaceDirection.xyz;
             vec3 screenSpaceDirection = screenSpaceDirection.xyz * 0.5f;
 
-            // do refinements
-            for (int j=0;j<8;j++) {
-                float ssdepth = GetDepthRM(screenSpaceOrigin.xy, sceneId)-1e-8f;
-                if (ssdepth<=screenSpaceOrigin.z) {
-                    screenSpaceOrigin.xyz -= screenSpaceDirection.xyz, screenSpaceDirection.xyz *= 0.5f;
-                } else {
-                    screenSpaceOrigin.xyz += screenSpaceDirection.xyz;
+            // due normal auto re-correction, that may to be incorrect, needs to try refinement twice
+            for (int R=0;R<2;R++) {
+
+                // do refinements
+                for (int j=0;j<8;j++) {
+                    float ssdepth = GetDepthRM(screenSpaceOrigin.xy, sceneId)-1e-8f;
+                    if (ssdepth<=screenSpaceOrigin.z) {
+                        screenSpaceOrigin.xyz -= screenSpaceDirection.xyz, screenSpaceDirection.xyz *= 0.5f;
+                    } else {
+                        screenSpaceOrigin.xyz += screenSpaceDirection.xyz;
+                    }
+
+                    // if too small distance, then break
+                    if (abs(screenSpaceOrigin.z - ssdepth) < 0.0001f) { break; };
                 }
-
-                // if too small distance, then break
-                if (abs(screenSpaceOrigin.z - ssdepth) < 0.0001f) { break; };
-            }
-
-            // 
-            vec3 cameraNormal = GetNormalRM(screenSpaceOrigin.xy, sceneId);
-
-            // recalculate ray origin by normal 
-            const vec3 inPosition = ScreenSpaceToCameraSpace(vec4(screenSpaceOrigin.xy,GetDepthRM(screenSpaceOrigin.xy, sceneId),1.f)).xyz;
-            const float dist = dot(inPosition.xyz-cameraSpaceOrigin,cameraNormal)/dot(cameraNormal,cameraSpaceDirection);
-            screenSpaceOrigin.xyz = CameraSpaceToScreenSpace(vec4(cameraSpaceDirection*dist+cameraSpaceOrigin,1.f)).xyz;
-            cameraNormal = GetNormalRM(screenSpaceOrigin.xy, sceneId);
-
+                
+                // recalculate ray origin by normal 
+                const vec3 cameraNormal = GetNormalRM(screenSpaceOrigin.xy, sceneId);
+                const vec3 inPosition = ScreenSpaceToCameraSpace(vec4(screenSpaceOrigin.xy,GetDepthRM(screenSpaceOrigin.xy, sceneId),1.f)).xyz;
+                const float dist = dot(inPosition.xyz-cameraSpaceOrigin,cameraNormal)/dot(cameraNormal,cameraSpaceDirection);
+                screenSpaceOrigin.xyz = CameraSpaceToScreenSpace(vec4(cameraSpaceDirection*dist+cameraSpaceOrigin,1.f)).xyz;
+            };
+            
             // check ray deviation 
+            vec3 cameraNormal = GetNormalRM(screenSpaceOrigin.xy, sceneId);
             if (dot(cameraNormal,cameraSpaceDirection)<=0.f && abs(GetDepthRM(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<(filterDepth ? 0.0002f : 0.001f) && 
             screenSpaceOrigin.x >= -1.f && screenSpaceOrigin.x < 1.f && screenSpaceOrigin.y >= -1.f && screenSpaceOrigin.y < 1.f) {
                 finalOrigin.xyz = screenSpaceOrigin.xyz, finalOrigin.w = 1.f; break; // 
