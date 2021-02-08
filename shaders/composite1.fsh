@@ -63,6 +63,7 @@ void main() {
         // 
         vec3 normal     = sampleNormal(vtexcoord, WATER_SCENE);
         vec3 tangent    = sampleTangent(vtexcoord, WATER_SCENE);
+        vec2 lmcoord    = sampleLmcoord(vtexcoord, WATER_SCENE);
         vec3 bitangent  = normalize(cross(tangent, normal));
 
         // 
@@ -88,7 +89,7 @@ void main() {
             bool usedplanar = false;
             vec4 sslrpos = vec4(0.f.xxxx);
             vec4 effect = makeScreenSpaceEffect(screenpos, normalize(reflect(normalize(screenpos.xyz), normal)), sslrpos, usedplanar);
-            sceneColor = mix(/*skyColor.xyz*/0.f.xxx, effect.xyz, effect.w);
+            sceneColor = mix(pow(texture(colortex8, vec2(0.f,lmcoord.y), 0).xyz, 2.2f.xxx)*pow(skyColor, 2.2f.xxx), effect.xyz, effect.w);
             // for skyColor required lightmap
         }
 

@@ -210,7 +210,6 @@ void main() {
         f_tangent = vec4(tangent.xyz, 1.f);
         f_lightmap.xy = lmcoord.xy;
         f_texcoord.xy = texcoord.xy;
-		f_depth = sslrpos.z;
 
         // disabled clouds
         f_color.a = 0.f;
@@ -315,7 +314,7 @@ void main() {
         gl_FragData[1] = vec4(pack2x3(mat2x3(f_normal.xyz, f_tangent.xyz)), enabled);
         gl_FragData[2] = vec4(pack3x2(mat3x2(f_texcoord.xy, f_lmcoord.xy, vec2(0.f.xx))), enabled);
         gl_FragData[3] = f_planar;
-        gl_FragDepth = f_depth;
+        gl_FragDepth = f_depth*0.5f+0.5f;
     };
 
 #endif

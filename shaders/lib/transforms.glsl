@@ -16,8 +16,7 @@ float linearize_depth(float d)
 
 //screen-/viewspace position
 vec3 getScreenpos(float depth, vec2 coord) {
-    //vec4 posNDC = vec4(coord.x*2.0-1.0, coord.y*2.0-1.0, 2.0*depth-1.0, 1.0);
-    vec4 posNDC = vec4(coord.x*2.0-1.0, coord.y*2.0-1.0, (depth), 1.0);
+    vec4 posNDC = vec4(coord.xy*2.f-1.f, depth*2.f-1.f, 1.0);
          posNDC = gbufferProjectionInverse*posNDC;
     return posNDC.xyz/posNDC.w;
 }

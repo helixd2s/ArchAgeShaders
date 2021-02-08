@@ -4,7 +4,7 @@ vec4 GetColorRM(){
 }
 
 float GetDepthRM(in vec2 screenSpaceCoord, in int sceneId) {
-    return sampleLinear(depthtex0, screenSpaceCoord*0.5f+0.5f, sceneId);
+    return sampleLinear(depthtex0, screenSpaceCoord*0.5f+0.5f, sceneId)*2.f-1.f;
 }
 
 vec3 GetNormalRM(in vec2 screenSpaceCoord, in int sceneId) {
@@ -101,7 +101,8 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
             
             // check ray deviation 
             vec3 cameraNormal = GetNormalRM(screenSpaceOrigin.xy, sceneId);
-            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && abs(GetDepthRM(screenSpaceOrigin.xy, sceneId)-screenSpaceOrigin.z)<(filterDepth ? 0.0002f : 0.001f) && 
+            float gdepth = GetDepthRM(screenSpaceOrigin.xy, sceneId);
+            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && abs(gdepth-screenSpaceOrigin.z)<(filterDepth ? 0.0002f : 0.001f) && (filterDepth?gdepth<=0.9999f:true) && 
             screenSpaceOrigin.x >= -1.f && screenSpaceOrigin.x < 1.f && screenSpaceOrigin.y >= -1.f && screenSpaceOrigin.y < 1.f) {
                 finalOrigin.xyz = screenSpaceOrigin.xyz, finalOrigin.w = 1.f; break; // 
             }

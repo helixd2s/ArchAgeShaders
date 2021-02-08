@@ -20,10 +20,13 @@ uniform samplerTyped colortex5;
 uniform samplerTyped colortex6;
 uniform samplerTyped colortex7;
 
-mat2x3 sampleUnpack(in samplerTyped samplr, in vec2 texcoord, in int sceneId) {
-#ifndef USE_SPLIT_SCREEN
+// lightmap
+uniform samplerTyped colortex8;
+
+vec3 sampleRaw(in samplerTyped samplr, in vec2 texcoord, in int sceneId) {
+    #ifndef USE_SPLIT_SCREEN
     ivec2 tcoord = ivec2(floor(texcoord * vec2(viewWidth, viewHeight)));
-    vec3 pckg = fetchLayer(samplr, tcoord, sceneId).xyz;
+    return fetchLayer(samplr, tcoord, sceneId).xyz;
 #else
     vec3 size = vec3(textureSize(samplr, 0), 1.f);
     vec2 mps = (splitArea[sceneId].zw - splitArea[sceneId].xy);
@@ -35,15 +38,22 @@ mat2x3 sampleUnpack(in samplerTyped samplr, in vec2 texcoord, in int sceneId) {
     texcoord = convertArea(texcoord-hpx, sceneId)+hpm;
 
     ivec2 tcoord = ivec2(floor(texcoord * vec2(viewWidth, viewHeight)));
-    vec3 pckg = texelFetch(samplr, tcoord, 0).xyz;
+    return texelFetch(samplr, tcoord, 0).xyz;
 #endif
-    return unpack2x3(pckg);
 }
 
 vec3 sampleNormal(in vec2 texcoord, in int sceneId) {
-    return normalize(sampleUnpack(colortex1, texcoord, sceneId)[0] * 2.f - 1.f);
+    return normalize(unpack2x3(sampleRaw(colortex1, texcoord, sceneId))[0] * 2.f - 1.f);
 }
 
 vec3 sampleTangent(in vec2 texcoord, in int sceneId) {
-    return normalize(sampleUnpack(colortex1, texcoord, sceneId)[1] * 2.f - 1.f);
+    return normalize(unpack2x3(sampleRaw(colortex1, texcoord, sceneId))[1] * 2.f - 1.f);
+}
+
+vec2 sampleTexcoord(in vec2 texcoord, in int sceneId) {
+    return unpack3x2(sampleRaw(colortex2, texcoord, sceneId))[0];
+}
+
+vec2 sampleLmcoord(in vec2 texcoord, in int sceneId) {
+    return unpack3x2(sampleRaw(colortex2, texcoord, sceneId))[1];
 }
