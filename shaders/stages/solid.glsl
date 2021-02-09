@@ -87,6 +87,9 @@ float depthHeight = 0.25f;
 float normalDepth = 0.25f;
 const int stepCount = 32;
 
+
+// TODO: DEFERRED MAPPING!
+// Needs layered framebuffers support and early fragment testing! (up to 100% can be faster)
 vec3 searchIntersection(in sampler2D depthtex, in vec2 texcoord, in vec3 view) {
     vec3 dir = vec3(-view.xy/view.z*depthHeight, -1.f);
 
