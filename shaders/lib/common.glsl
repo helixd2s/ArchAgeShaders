@@ -22,50 +22,50 @@ bool checkArea(in vec2 coord) {
 }
 
 // FIXED!
-uvec4 sampleLayer(in usampler2DArray smplr, in vec2 texcoord, in int layer) {
+uvec4 sampleLayer(in usampler2DArray smplr, in vec2 txy, in int layer) {
     vec3 size = textureSize(smplr, 0);
     float zcoord = (float(layer) + 0.49999f) / size.z;
-    return texture(smplr, vec3(texcoord, float(layer)), 0);
+    return texture(smplr, vec3(txy, float(layer)), 0);
 }
 
 // FIXED!
-uvec4 gatherLayer(in usampler2DArray smplr, in vec2 texcoord, in int layer, const int component) {
+uvec4 gatherLayer(in usampler2DArray smplr, in vec2 txy, in int layer, const int component) {
     vec3 size = textureSize(smplr, 0);
     float zcoord = (float(layer) + 0.49999f) / size.z;
-    if (component == 0) { return textureGather(smplr, vec3(texcoord, float(layer)), 0); };
-    if (component == 1) { return textureGather(smplr, vec3(texcoord, float(layer)), 1); };
-    if (component == 2) { return textureGather(smplr, vec3(texcoord, float(layer)), 2); };
-    if (component == 3) { return textureGather(smplr, vec3(texcoord, float(layer)), 3); };
+    if (component == 0) { return textureGather(smplr, vec3(txy, float(layer)), 0); };
+    if (component == 1) { return textureGather(smplr, vec3(txy, float(layer)), 1); };
+    if (component == 2) { return textureGather(smplr, vec3(txy, float(layer)), 2); };
+    if (component == 3) { return textureGather(smplr, vec3(txy, float(layer)), 3); };
     return uvec4(0u);
 }
 
 // FIXED!
-uvec4 fetchLayer(in usampler2DArray smplr, in ivec2 texcoord, in int layer) {
-    return texelFetch(smplr, ivec3(texcoord, layer), 0);
+uvec4 fetchLayer(in usampler2DArray smplr, in ivec2 txy, in int layer) {
+    return texelFetch(smplr, ivec3(txy, layer), 0);
 }
 
 
 // FIXED!
-vec4 sampleLayer(in sampler2DArray smplr, in vec2 texcoord, in int layer) {
+vec4 sampleLayer(in sampler2DArray smplr, in vec2 txy, in int layer) {
     vec3 size = textureSize(smplr, 0);
     float zcoord = (float(layer) + 0.49999f) / size.z;
-    return texture(smplr, vec3(texcoord, float(layer)), 0);
+    return texture(smplr, vec3(txy, float(layer)), 0);
 }
 
 // FIXED!
-vec4 gatherLayer(in sampler2DArray smplr, in vec2 texcoord, in int layer, const int component) {
+vec4 gatherLayer(in sampler2DArray smplr, in vec2 txy, in int layer, const int component) {
     vec3 size = textureSize(smplr, 0);
     float zcoord = (float(layer) + 0.49999f) / size.z;
-    if (component == 0) { return textureGather(smplr, vec3(texcoord, float(layer)), 0); };
-    if (component == 1) { return textureGather(smplr, vec3(texcoord, float(layer)), 1); };
-    if (component == 2) { return textureGather(smplr, vec3(texcoord, float(layer)), 2); };
-    if (component == 3) { return textureGather(smplr, vec3(texcoord, float(layer)), 3); };
+    if (component == 0) { return textureGather(smplr, vec3(txy, float(layer)), 0); };
+    if (component == 1) { return textureGather(smplr, vec3(txy, float(layer)), 1); };
+    if (component == 2) { return textureGather(smplr, vec3(txy, float(layer)), 2); };
+    if (component == 3) { return textureGather(smplr, vec3(txy, float(layer)), 3); };
     return vec4(0.f.xxxx);
 }
 
 // FIXED!
-vec4 fetchLayer(in sampler2DArray smplr, in ivec2 texcoord, in int layer) {
-    return texelFetch(smplr, ivec3(texcoord, layer), 0);
+vec4 fetchLayer(in sampler2DArray smplr, in ivec2 txy, in int layer) {
+    return texelFetch(smplr, ivec3(txy, layer), 0);
 }
 
 //
@@ -82,52 +82,52 @@ float sampleLinear(in sampler2DArray smplr, in vec2 txy, in int layer) {
 // 
 #ifndef USE_SPLIT_SCREEN
 // 
-uvec4 sampleLayer(in usampler2D smplr, in vec2 texcoord, in int layer) {
+uvec4 sampleLayer(in usampler2D smplr, in vec2 txy, in int layer) {
     vec3 size = vec3(textureSize(smplr, 0), 1.f);
     float zcoord = (float(layer) + 0.49999f) / size.z;
-    return texture(smplr, texcoord, 0);
+    return texture(smplr, txy, 0);
 }
 
 // 
-uvec4 gatherLayer(in usampler2D smplr, in vec2 texcoord, in int layer, const int component) {
+uvec4 gatherLayer(in usampler2D smplr, in vec2 txy, in int layer, const int component) {
     vec3 size = vec3(textureSize(smplr, 0), 1.f);
     float zcoord = (float(layer) + 0.49999f) / size.z;
-    if (component == 0) { return textureGather(smplr, texcoord, 0); };
-    if (component == 1) { return textureGather(smplr, texcoord, 1); };
-    if (component == 2) { return textureGather(smplr, texcoord, 2); };
-    if (component == 3) { return textureGather(smplr, texcoord, 3); };
+    if (component == 0) { return textureGather(smplr, txy, 0); };
+    if (component == 1) { return textureGather(smplr, txy, 1); };
+    if (component == 2) { return textureGather(smplr, txy, 2); };
+    if (component == 3) { return textureGather(smplr, txy, 3); };
     return uvec4(0u);
 }
 
 // 
-uvec4 fetchLayer(in usampler2D smplr, in ivec2 texcoord, in int layer) {
+uvec4 fetchLayer(in usampler2D smplr, in ivec2 txy, in int layer) {
     ivec3 size = ivec3(textureSize(smplr, 0), 1);
-    return texelFetch(smplr, texcoord, 0);
+    return texelFetch(smplr, txy, 0);
 }
 
 
 // 
-vec4 sampleLayer(in sampler2D smplr, in vec2 texcoord, in int layer) {
+vec4 sampleLayer(in sampler2D smplr, in vec2 txy, in int layer) {
     vec3 size = vec3(textureSize(smplr, 0), 1.f);
     float zcoord = (float(layer) + 0.49999f) / size.z;
-    return texture(smplr, texcoord, 0);
+    return texture(smplr, txy, 0);
 }
 
 // 
-vec4 gatherLayer(in sampler2D smplr, in vec2 texcoord, in int layer, const int component) {
+vec4 gatherLayer(in sampler2D smplr, in vec2 txy, in int layer, const int component) {
     vec3 size = vec3(textureSize(smplr, 0), 1.f);
     float zcoord = (float(layer) + 0.49999f) / size.z;
-    if (component == 0) { return textureGather(smplr, texcoord, 0); };
-    if (component == 1) { return textureGather(smplr, texcoord, 1); };
-    if (component == 2) { return textureGather(smplr, texcoord, 2); };
-    if (component == 3) { return textureGather(smplr, texcoord, 3); };
+    if (component == 0) { return textureGather(smplr, txy, 0); };
+    if (component == 1) { return textureGather(smplr, txy, 1); };
+    if (component == 2) { return textureGather(smplr, txy, 2); };
+    if (component == 3) { return textureGather(smplr, txy, 3); };
     return vec4(0.f.xxxx);
 }
 
 // 
-vec4 fetchLayer(in sampler2D smplr, in ivec2 texcoord, in int layer) {
+vec4 fetchLayer(in sampler2D smplr, in ivec2 txy, in int layer) {
     ivec3 size = ivec3(textureSize(smplr, 0), 1);
-    return texelFetch(smplr, texcoord, 0);
+    return texelFetch(smplr, txy, 0);
 }
 
 //
@@ -171,44 +171,44 @@ vec4 convertAreaNDC(in vec4 coord, in int area) {
 
 
 // 
-vec4 sampleLayer(in sampler2D smplr, in vec2 texcoord, in int layer) {
-    vec3 size = vec3(textureSize(smplr, 0), 1.f);
+vec4 sampleLayer(in sampler2D smplr, in vec2 txy, in int layer) {
+    vec3 txs = vec3(textureSize(smplr, 0), 1.f);
     vec2 mps = (splitArea[layer].zw - splitArea[layer].xy);
-    vec2 hpx = 0.5f/(size.xy*mps);
-    vec2 hpm = 0.5f/(size.xy);
+    vec2 hpx = 0.5f/(txs.xy*mps);
+    vec2 hpm = 0.5f/(txs.xy);
 
     // de-centralize pixel
-    texcoord = clamp(texcoord, hpx-0.0001f, 1.f-hpx+0.0001f);
-    texcoord = convertArea(texcoord-hpx, layer)+hpm;
-    //texcoord = (ceil(convertArea(texcoord-hpx, layer)*size.xy)+0.5f)/size.xy;
+    txy = clamp(txy, hpx-0.0001f, 1.f-hpx+0.0001f);
+    txy = convertArea(txy-hpx, layer)+hpm;
+    //txy = (ceil(convertArea(txy-hpx, layer)*txs.xy)+0.5f)/txs.xy;
 
-    return texture(smplr, texcoord, 0);
+    return texture(smplr, txy, 0);
 }
 
 // 
-vec4 gatherLayer(in sampler2D smplr, in vec2 texcoord, in int layer, const int component) {
-    vec3 size = vec3(textureSize(smplr, 0), 1.f);
+vec4 gatherLayer(in sampler2D smplr, in vec2 txy, in int layer, const int component) {
+    vec3 txs = vec3(textureSize(smplr, 0), 1.f);
     vec2 mps = (splitArea[layer].zw - splitArea[layer].xy);
-    vec2 hpx = 0.5f/(size.xy*mps);
-    vec2 hpm = 0.5f/(size.xy);
+    vec2 hpx = 0.5f/(txs.xy*mps);
+    vec2 hpm = 0.5f/(txs.xy);
 
     // de-centralize pixel
-    texcoord = clamp(texcoord, hpx-0.0001f, 1.f-hpx+0.0001f);
-    texcoord = convertArea(texcoord-hpx, layer)+hpm;
-    //texcoord = (ceil(convertArea(texcoord-hpx, layer)*size.xy)+0.5f)/size.xy;
+    txy = clamp(txy, hpx-0.0001f, 1.f-hpx+0.0001f);
+    txy = convertArea(txy-hpx, layer)+hpm;
+    //txy = (ceil(convertArea(txy-hpx, layer)*txs.xy)+0.5f)/txs.xy;
 
-    if (component == 0) { return textureGather(smplr, texcoord, 0); };
-    if (component == 1) { return textureGather(smplr, texcoord, 1); };
-    if (component == 2) { return textureGather(smplr, texcoord, 2); };
-    if (component == 3) { return textureGather(smplr, texcoord, 3); };
+    if (component == 0) { return textureGather(smplr, txy, 0); };
+    if (component == 1) { return textureGather(smplr, txy, 1); };
+    if (component == 2) { return textureGather(smplr, txy, 2); };
+    if (component == 3) { return textureGather(smplr, txy, 3); };
     return vec4(0.f.xxxx);
 }
 
 // 
-vec4 fetchLayer(in sampler2D smplr, in ivec2 texcoord, in int layer) {
+vec4 fetchLayer(in sampler2D smplr, in ivec2 txy, in int layer) {
     ivec3 size = ivec3(textureSize(smplr, 0), 1);
-    texcoord += ivec2(splitArea[layer].xy * vec2(size.xy));
-    return texelFetch(smplr, texcoord, 0);
+    txy += ivec2(splitArea[layer].xy * vec2(size.xy));
+    return texelFetch(smplr, txy, 0);
 }
 
 // 
@@ -221,6 +221,7 @@ float sampleLinear(in sampler2D smplr, in vec2 txy, in int layer) {
     // de-centralize pixel
     txy = clamp(txy, hpx-0.0001f, 1.f-hpx+0.0001f);
     txy = convertArea(txy-hpx, layer)+hpm;
+    //txy = (ceil(convertArea(txy-hpx, layer)*txs.xy)+0.5f)/txs.xy;
 
     // 
     const vec4 txl = textureGather(smplr, txy, 0);
