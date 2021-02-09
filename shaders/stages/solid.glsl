@@ -250,7 +250,7 @@ void main() {
         vec3 tview = normalize(worldview.xyz*tbn);
 #ifdef BLOCKS
         vec2 modTx = searchIntersection(normals, texcoord.xy, tview).xy;
-        viewpos.xyz -= normal.xyz * (1.f-texture(normals, modTx).w) * depthHeight;
+        viewpos.xyz -= normal.xyz * (1.f-texture(normals, texcoord.xy).w) * depthHeight;
         sslrpos = gbufferProjection * viewpos; sslrpos /= sslrpos.w;
 #else
         vec2 modTx = texcoord.xy;
