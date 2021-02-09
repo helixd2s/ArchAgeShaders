@@ -49,6 +49,7 @@ attribute vec4 at_tangent;
 uniform sampler2D tex; 		//this is our albedo texture. optifine's "default" name for this is "texture" but that collides with the texture() function of newer OpenGL versions. We use "tex" or "gcolor" instead, although it is just falling back onto the same sampler as an undefined behavior
 uniform sampler2D lightmap;	//the vanilla lightmap texture, basically useless with shaders
 uniform int frameCounter;
+uniform sampler2D normals;
 
 /*DRAWBUFFERS:0127*/
 
@@ -72,7 +73,62 @@ uniform int fogMode;
 uniform float fogDensity;
 uniform vec3 fogColor; 
 
+uniform ivec2 atlasSize;
 
+const vec2 texSize = vec2(128.f, 128.f);
+
+vec4 sampleInbound(in sampler2D depthtex, in vec2 unit, in vec2 atlasOffset) {
+    vec2 gridSize = vec2(atlasSize)/texSize;
+    vec2 spaces = fract(unit)/gridSize + atlasOffset;
+    return texture(depthtex, spaces);
+}
+
+float depthHeight = 0.25f;
+float normalDepth = 0.25f;
+const int stepCount = 32;
+
+vec3 searchIntersection(in sampler2D depthtex, in vec2 texcoord, in vec3 view) {
+    vec3 dir = vec3(-view.xy/view.z*depthHeight, -1.f);
+
+    vec2 gridSize = vec2(atlasSize)/texSize;
+    vec2 altasOffset = floor(texcoord*gridSize)/gridSize;
+    vec2 unit = fract(texcoord*gridSize);
+
+    float stepSize = 1.f/float(stepCount);
+    vec3 coord = vec3(unit, 0.f);
+    vec3 best = coord;
+
+    // refinements
+    for (int i=0;i<1;i++) {
+        
+        // try to search needed height
+        for (int r=0;r<stepCount;r++) {
+            float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w);
+            if (coord.z <= height) {
+                best = coord;
+
+                if (abs(height - coord.z) < 0.001f) { break; };
+                coord -= dir*stepSize;
+                stepSize *= 0.5f;
+            } else {
+                coord += dir*stepSize;
+            }
+        }
+        coord = best;
+
+        // getting correct normal and height
+        float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w);
+        vec3 normal = normalize(sampleInbound(depthtex, coord.xy, altasOffset).xyz*2.f-1.f);
+        //normal = normalize(vec3(normal.xy, normal.z/normalDepth));
+
+        // plane intersection correction of result (YOU NEEDS CORRECT NORMAL!!!)
+        float d = dot(vec3(coord.xy, height)-coord, normal) / dot(dir, normal);
+        coord += dir * d;
+        
+    }
+
+    return vec3(altasOffset+fract(best.xy)/gridSize, best.z);
+}
 
 void main() {
 #ifdef VERTEX_SHADER
@@ -129,7 +185,7 @@ void main() {
 	normal = (gbufferModelView * vnormal).xyz;
     entity = mc_Entity;
     entity.w = intBitsToFloat(layerId_);
-    tangent = ( vec4(at_tangent.xyz, 0.f));
+    tangent = ( vec4(gl_NormalMatrix*at_tangent.xyz, 0.f));
 
     // set where needs to draw
     SetLayer(gl_Position, gl_Layer, layerId);
@@ -185,12 +241,24 @@ void main() {
         f_depth = sslrpos.z;
 
     #ifdef SOLID //
-		f_color = texture(tex, texcoord.st) * color;
+        mat3x3 tbn = mat3x3(normalize(tangent.xyz), normalize(cross(tangent.xyz,normal.xyz)), normalize(normal.xyz));
+        vec3 tview = normalize(worldview.xyz*tbn);
+#ifdef BLOCKS
+        vec2 modTx = searchIntersection(normals, texcoord.xy, tview).xy;
+#else
+        vec2 modTx = texcoord.xy;
+#endif
+
+        vec3 mnormal = normalize(texture(normals, modTx).xyz*2.f-1.f);
+        mnormal = normalize(vec3(mnormal.xy, mnormal.z/normalDepth));
+
+		f_color = texture(tex, modTx.st) * color;
         f_color *= texture(lightmap, lmcoord.xy);
+        //f_color = vec4(mnormal*0.5f+0.5f, 1.f);
 		f_normal = vec4(normal, 1.0);
         f_tangent = vec4(tangent.xyz, 1.f);
 		f_lightmap = texture(lightmap, lmcoord.xy);
-        f_texcoord = texcoord.st;
+        f_texcoord = modTx.st;
         f_lmcoord = lmcoord.xy;
 
         f_normal.xyz = dot(f_normal.xyz.xyz, worldview.xyz) >= 0.f ? -f_normal.xyz : f_normal.xyz;

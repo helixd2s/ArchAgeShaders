@@ -4,5 +4,6 @@
 #define TEXTURED 
 #define SOLID 
 #define TRANSLUCENT
+#define BLOCKS
 
 #include "stages/solid.glsl"

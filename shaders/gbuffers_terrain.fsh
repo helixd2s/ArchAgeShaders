@@ -4,5 +4,6 @@
 #define TEXTURED 
 #define SOLID 
 #define EARLY_FRAG_TEST
+#define BLOCKS
 
 #include "stages/solid.glsl"
