@@ -176,16 +176,18 @@ void main() {
 	color = gl_Color;
 
     // 
+    vec4 vtangent = gbufferModelViewInverse * vec4(normalize(gl_NormalMatrix*at_tangent.xyz), 0.f);
     vec4 vnormal = gbufferModelViewInverse * vec4(normalize(gl_NormalMatrix*gl_Normal), 0.f);
     if (instanceId == 1) {
         vnormal.y *= -1.f;
+        vtangent.y *= -1.f;
     };
 
     // 
 	normal = (gbufferModelView * vnormal).xyz;
+    tangent = (gbufferModelView * vtangent);
     entity = mc_Entity;
     entity.w = intBitsToFloat(layerId_);
-    tangent = ( vec4(gl_NormalMatrix*at_tangent.xyz, 0.f));
 
     // set where needs to draw
     SetLayer(gl_Position, gl_Layer, layerId);
@@ -241,7 +243,7 @@ void main() {
         f_depth = sslrpos.z;
 
     #ifdef SOLID //
-        mat3x3 tbn = mat3x3(normalize(tangent.xyz), normalize(cross(tangent.xyz,normal.xyz)), normalize(normal.xyz));
+        mat3x3 tbn = mat3x3(normalize(tangent.xyz), (instanceId == 1 ? -1.f : 1.f)*normalize(cross(tangent.xyz, normal.xyz)), normalize(normal.xyz));
         vec3 tview = normalize(worldview.xyz*tbn);
 #ifdef BLOCKS
         vec2 modTx = searchIntersection(normals, texcoord.xy, tview).xy;
@@ -249,8 +251,11 @@ void main() {
         vec2 modTx = texcoord.xy;
 #endif
 
-        vec3 mnormal = normalize(texture(normals, modTx).xyz*2.f-1.f);
-        mnormal = normalize(vec3(mnormal.xy, mnormal.z/normalDepth));
+        viewpos.xyz -= normal.xyz * (1.f-texture(normals, modTx).w) * depthHeight;
+        sslrpos = gbufferProjection * viewpos; sslrpos /= sslrpos.w;
+
+        //vec3 mnormal = normalize(texture(normals, modTx).xyz*2.f-1.f);
+        //mnormal = normalize(vec3(mnormal.xy, mnormal.z/normalDepth));
 
 		f_color = texture(tex, modTx.st) * color;
         f_color *= texture(lightmap, lmcoord.xy);
@@ -260,6 +265,7 @@ void main() {
 		f_lightmap = texture(lightmap, lmcoord.xy);
         f_texcoord = modTx.st;
         f_lmcoord = lmcoord.xy;
+        f_depth = sslrpos.z;
 
         f_normal.xyz = dot(f_normal.xyz.xyz, worldview.xyz) >= 0.f ? -f_normal.xyz : f_normal.xyz;
 
