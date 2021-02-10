@@ -85,7 +85,8 @@ vec4 sampleInbound(in sampler2D depthtex, in vec2 unit, in vec2 atlasOffset) {
 
 float depthHeight = 0.25f;
 float normalDepth = 0.25f;
-const int linearSteps = 32;
+const int linearSteps = 24;
+const int binarySteps = 8;
 
 // TODO: DEFERRED MAPPING!
 // Needs layered framebuffers support and early fragment testing! (up to 100% can be faster)
@@ -98,17 +99,24 @@ vec3 searchIntersection(in sampler2D depthtex, in vec2 texcoord, in vec3 view, i
 
     float stepSize = 1.f/float(linearSteps)*depthHeight;
     vec3 coord = vec3(unit, 0.f);
-    vec3 best = coord;
+    
+    vec3 bcoord = coord;
     vec3 pcoord = coord;
+    float t = 0.f;
+    
+    float bestHeight = 0.f;
 
-    {
+    for (int I=0;I<2;I++) {
+        const int steps = I == 0 ? linearSteps : binarySteps;
+
         // try to search needed height
-        coord = best;
-        for (int r=0;r<linearSteps+4;r++) {
+        vec3 best = coord;
+        for (int r=0;r<steps;r++) 
+        {
             float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w)*depthHeight;
             if (coord.z <= height) {
-                best = coord;
-                if (abs(height - coord.z) < 0.01f) { break; };
+                best = coord, bestHeight = height;
+                if (abs(height - coord.z) < 0.001f) { break; };
                 coord -= dir*stepSize;
                 stepSize *= 0.5f;
             }
@@ -116,26 +124,30 @@ vec3 searchIntersection(in sampler2D depthtex, in vec2 texcoord, in vec3 view, i
         }
         coord = best;
 
-        float t = 0.f;
-
+        t = 0.f;
         {   // normal based planar intersection correction (but needs to check depth correct)
             // getting correct normal and height
+            float amplifier = depthHeight/normalDepth;
             float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w)*depthHeight;
             vec3 normal = normalize(sampleInbound(depthtex, coord.xy, altasOffset).xyz*2.f-1.f);
-            normal = normalize(vec3(normal.xy/normalDepth*depthHeight, normal.z));
+            normal = normalize(vec3(normal.xy*amplifier, normal.z));
 
             //float d = 0.f;
             float det = dot(vec3(dir.xy, dir.z), normal);
             t = dot(vec3(coord.xy, height) - coord, normal) / det;
             vec3 pre = coord + dir * t;
-            if (pre.z >= -depthHeight && abs(det) >= 0.0001f &&  abs(-(1.f-sampleInbound(depthtex, pre.xy, altasOffset).w)*depthHeight-pre.z) < 0.01f  ) { debugIndicator = true; } else { t = 0.f; };
+            
+            float preHeight = -(1.f-sampleInbound(depthtex, pre.xy, altasOffset).w)*depthHeight;
+            if (pre.z >= -depthHeight && abs(det) >= 0.0001f && abs(preHeight-pre.z) < 0.001f) { bestHeight = preHeight; } else { t = 0.f; };
         }
-
         coord += dir*t;
-        best = coord;
+
+        // already got best result
+        bcoord = coord;
+        if ( abs(bestHeight-coord.z) < 0.001f ) { break; };
     }
 
-    return vec3(altasOffset+fract(best.xy)/gridSize, best.z);
+    return vec3(altasOffset+fract(bcoord.xy)/gridSize, bcoord.z);
 }
 
 void main() {
@@ -250,11 +262,12 @@ void main() {
         f_detector = vec4(0.f.xxx, 1.f);
         f_depth = sslrpos.z;
 
+        bool debugIndicator = false;
     #ifdef SOLID //
         mat3x3 tbn = mat3x3(normalize(tangent.xyz), (instanceId == 1 ? -1.f : 1.f)*normalize(cross(tangent.xyz, normal.xyz)), normalize(normal.xyz));
         vec3 tview = normalize(worldview.xyz*tbn);
 #ifdef BLOCKS
-        bool debugIndicator = false;
+        
         vec2 modTx = searchIntersection(normals, texcoord.xy, tview, debugIndicator).xy;
         viewpos.xyz -= normal.xyz * (1.f-texture(normals, texcoord.xy).w) * depthHeight;
         sslrpos = gbufferProjection * viewpos; sslrpos /= sslrpos.w;
