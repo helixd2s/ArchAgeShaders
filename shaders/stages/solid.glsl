@@ -100,35 +100,31 @@ vec3 searchIntersection(in sampler2D depthtex, in vec2 texcoord, in vec3 view) {
     float stepSize = 1.f/float(stepCount);
     vec3 coord = vec3(unit, 0.f);
     vec3 best = coord;
-
+    
     // refinements
-    for (int i=0;i<1;i++) {
-        
+
         // try to search needed height
         for (int r=0;r<stepCount;r++) {
             float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w);
             if (coord.z <= height) {
                 best = coord;
-
                 if (abs(height - coord.z) < 0.001f) { break; };
                 coord -= dir*stepSize;
                 stepSize *= 0.5f;
-            } else {
-                coord += dir*stepSize;
             }
+            coord += dir*stepSize;
         }
-        coord = best;
+        //coord -= dir*stepSize;
 
         // getting correct normal and height
-        float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w);
-        vec3 normal = normalize(sampleInbound(depthtex, coord.xy, altasOffset).xyz*2.f-1.f);
-        //normal = normalize(vec3(normal.xy, normal.z/normalDepth));
+        float height = -(1.f-sampleInbound(depthtex, best.xy, altasOffset).w);
+        vec3 normal = normalize(sampleInbound(depthtex, best.xy, altasOffset).xyz*2.f-1.f);
+        //normal = normalize(vec3(normal.xy, normal.z*normalDepth));
 
         // plane intersection correction of result (YOU NEEDS CORRECT NORMAL!!!)
-        float d = dot(vec3(coord.xy, height)-coord, normal) / dot(dir, normal);
-        coord += dir * d;
-        
-    }
+        //float d = 0.f;
+        float d = dot(vec3(best.xy, height) - best, normal) / dot(dir, normal);
+        best += dir * max(d,0.f);
 
     return vec3(altasOffset+fract(best.xy)/gridSize, best.z);
 }
