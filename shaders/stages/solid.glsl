@@ -85,46 +85,55 @@ vec4 sampleInbound(in sampler2D depthtex, in vec2 unit, in vec2 atlasOffset) {
 
 float depthHeight = 0.25f;
 float normalDepth = 0.25f;
-const int stepCount = 32;
-
+const int linearSteps = 32;
 
 // TODO: DEFERRED MAPPING!
 // Needs layered framebuffers support and early fragment testing! (up to 100% can be faster)
-vec3 searchIntersection(in sampler2D depthtex, in vec2 texcoord, in vec3 view) {
-    vec3 dir = vec3(-view.xy/view.z*depthHeight, -1.f);
+vec3 searchIntersection(in sampler2D depthtex, in vec2 texcoord, in vec3 view, inout bool debugIndicator) {
+    vec3 dir = vec3(-view.xy/view.z, -1.f);
 
     vec2 gridSize = vec2(atlasSize)/texSize;
     vec2 altasOffset = floor(texcoord*gridSize)/gridSize;
     vec2 unit = fract(texcoord*gridSize);
 
-    float stepSize = 1.f/float(stepCount);
+    float stepSize = 1.f/float(linearSteps)*depthHeight;
     vec3 coord = vec3(unit, 0.f);
     vec3 best = coord;
-    
-    // refinements
+    vec3 pcoord = coord;
 
+    {
         // try to search needed height
-        for (int r=0;r<stepCount;r++) {
-            float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w);
+        coord = best;
+        for (int r=0;r<linearSteps+4;r++) {
+            float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w)*depthHeight;
             if (coord.z <= height) {
                 best = coord;
-                if (abs(height - coord.z) < 0.001f) { break; };
+                if (abs(height - coord.z) < 0.01f) { break; };
                 coord -= dir*stepSize;
                 stepSize *= 0.5f;
             }
             coord += dir*stepSize;
         }
-        //coord -= dir*stepSize;
+        coord = best;
 
-        // getting correct normal and height
-        float height = -(1.f-sampleInbound(depthtex, best.xy, altasOffset).w);
-        vec3 normal = normalize(sampleInbound(depthtex, best.xy, altasOffset).xyz*2.f-1.f);
-        //normal = normalize(vec3(normal.xy, normal.z*normalDepth));
+        float t = 0.f;
 
-        // plane intersection correction of result (YOU NEEDS CORRECT NORMAL!!!)
-        //float d = 0.f;
-        float d = dot(vec3(best.xy, height) - best, normal) / dot(dir, normal);
-        best += dir * max(d,0.f);
+        {   // normal based planar intersection correction (but needs to check depth correct)
+            // getting correct normal and height
+            float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w)*depthHeight;
+            vec3 normal = normalize(sampleInbound(depthtex, coord.xy, altasOffset).xyz*2.f-1.f);
+            normal = normalize(vec3(normal.xy/normalDepth*depthHeight, normal.z));
+
+            //float d = 0.f;
+            float det = dot(vec3(dir.xy, dir.z), normal);
+            t = dot(vec3(coord.xy, height) - coord, normal) / det;
+            vec3 pre = coord + dir * t;
+            if (pre.z >= -depthHeight && abs(det) >= 0.0001f &&  abs(-(1.f-sampleInbound(depthtex, pre.xy, altasOffset).w)*depthHeight-pre.z) < 0.01f  ) { debugIndicator = true; } else { t = 0.f; };
+        }
+
+        coord += dir*t;
+        best = coord;
+    }
 
     return vec3(altasOffset+fract(best.xy)/gridSize, best.z);
 }
@@ -245,7 +254,8 @@ void main() {
         mat3x3 tbn = mat3x3(normalize(tangent.xyz), (instanceId == 1 ? -1.f : 1.f)*normalize(cross(tangent.xyz, normal.xyz)), normalize(normal.xyz));
         vec3 tview = normalize(worldview.xyz*tbn);
 #ifdef BLOCKS
-        vec2 modTx = searchIntersection(normals, texcoord.xy, tview).xy;
+        bool debugIndicator = false;
+        vec2 modTx = searchIntersection(normals, texcoord.xy, tview, debugIndicator).xy;
         viewpos.xyz -= normal.xyz * (1.f-texture(normals, texcoord.xy).w) * depthHeight;
         sslrpos = gbufferProjection * viewpos; sslrpos /= sslrpos.w;
 #else
@@ -257,6 +267,10 @@ void main() {
 
 		f_color = texture(tex, modTx.st) * color;
         f_color *= texture(lightmap, lmcoord.xy);
+
+        // debug some fragments
+        //if (debugIndicator) { f_color = vec4(0.f, 1.f, 0.f, 1.f); };
+
         //f_color = vec4(mnormal*0.5f+0.5f, 1.f);
 		f_normal = vec4(normal, 1.0);
         f_tangent = vec4(tangent.xyz, 1.f);
