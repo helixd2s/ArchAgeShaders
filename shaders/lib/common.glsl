@@ -1,7 +1,8 @@
 const int DEFAULT_SCENE = 0;
-const int REFLECTION_SCENE = 1;
-const int TRANSLUCENT_SCENE = 3;
-const int WATER_SCENE = 2;
+const int CUTOUT_SCENE = 1;
+const int TRANSLUCENT_SCENE = 2;
+const int WATER_SCENE = 3;
+const int REFLECTION_SCENE = 4;
 
 #define USE_SPLIT_SCREEN
 

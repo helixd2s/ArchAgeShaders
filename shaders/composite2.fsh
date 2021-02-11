@@ -27,49 +27,141 @@ uniform mat4 shadowModelView;
 
 /*DRAWBUFFERS:0*/
 
+uniform sampler2D colortex8; // lightmap
+uniform sampler2D colortex9; // diffuse
+uniform sampler2D colortexA; // normals
+uniform sampler2D colortexB; // specular
+
+uniform ivec2 atlasSize;
+
+const vec2 texSize = vec2(128.f, 128.f);
+
+vec4 sampleInbound(in sampler2D depthtex, in vec2 unit, in vec2 atlasOffset) {
+    vec2 gridSize = textureSize(depthtex, 0).xy/texSize;
+    vec2 spaces = fract(unit)/gridSize + atlasOffset;
+    return texture(depthtex, spaces);
+}
+
+float depthHeight = 0.25f;
+float normalDepth = 0.25f;
+const int linearSteps = 24;
+const int binarySteps = 8;
+
+// TODO: DEFERRED MAPPING!
+// Needs layered framebuffers support and early fragment testing! (up to 100% can be faster)
+vec3 searchIntersection(in sampler2D depthtex, in vec2 texcoord, in vec3 view, inout bool debugIndicator) {
+    vec3 dir = vec3(-view.xy/view.z, -1.f);
+
+    vec2 gridSize = textureSize(depthtex, 0).xy/texSize;
+    vec2 altasOffset = floor(texcoord*gridSize)/gridSize;
+    vec2 unit = fract(texcoord*gridSize);
+
+    float stepSize = 1.f/float(linearSteps)*depthHeight;
+    vec3 coord = vec3(unit, 0.f);
+    
+    vec3 bcoord = coord;
+    vec3 pcoord = coord;
+    float t = 0.f;
+    
+    float bestHeight = 0.f;
+
+    for (int I=0;I<2;I++) {
+        const int steps = I == 0 ? linearSteps : binarySteps;
+
+        // try to search needed height
+        vec3 best = coord;
+        for (int r=0;r<steps;r++) 
+        {
+            float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w)*depthHeight;
+            if (coord.z <= height) {
+                best = coord, bestHeight = height;
+                if (abs(height - coord.z) < 0.001f) { break; };
+                coord -= dir*stepSize;
+                stepSize *= 0.5f;
+            }
+            coord += dir*stepSize;
+        }
+        coord = best;
+
+        t = 0.f;
+        {   // normal based planar intersection correction (but needs to check depth correct)
+            // getting correct normal and height
+            float amplifier = depthHeight/normalDepth;
+            float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w)*depthHeight;
+            vec3 normal = normalize(sampleInbound(depthtex, coord.xy, altasOffset).xyz*2.f-1.f);
+            normal = normalize(vec3(normal.xy*amplifier, normal.z));
+
+            //float d = 0.f;
+            float det = dot(vec3(dir.xy, dir.z), normal);
+            t = dot(vec3(coord.xy, height) - coord, normal) / det;
+            vec3 pre = coord + dir * t;
+            
+            float preHeight = -(1.f-sampleInbound(depthtex, pre.xy, altasOffset).w)*depthHeight;
+            if (pre.z >= -depthHeight && abs(det) >= 0.0001f && abs(preHeight-pre.z) < 0.001f) { bestHeight = preHeight; } else { t = 0.f; };
+        }
+        coord += dir*t;
+
+        // already got best result
+        bcoord = coord;
+        if ( abs(bestHeight-coord.z) < 0.001f ) { break; };
+    }
+
+    return vec3(altasOffset+fract(bcoord.xy)/gridSize, bcoord.z);
+}
+
+
+
 // THIS IS WATER SHADER
 void main() {
 
     if (layerId == DEFAULT_SCENE) {
-        // 
-        float groundDepth = sampleLayer(depthtex0, vtexcoord, DEFAULT_SCENE).x;
-        float sceneDepth = sampleLayer(depthtex0, vtexcoord, WATER_SCENE).x;
-        float translucentDepth = sampleLayer(depthtex0, vtexcoord, TRANSLUCENT_SCENE).x;
-        vec3 screenpos 	= getScreenpos(sceneDepth.x, vtexcoord);
+        //ivec2  texcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
+        //ivec2 rtexcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
 
         // 
-        vec3 normal     = sampleNormal(vtexcoord, WATER_SCENE);
-        vec3 tangent    = sampleTangent(vtexcoord, WATER_SCENE);
+        vec3 sceneColor  = sampleLayer(colortex0, vtexcoord, DEFAULT_SCENE).rgb;
+        float sceneDepth = sampleLayer(depthtex0, vtexcoord, DEFAULT_SCENE).x;
+        vec4 viewpos     = vec4(getScreenpos(sceneDepth.x, vtexcoord), 1.f);
+        vec3 worldpos    = toWorldpos(viewpos.xyz);
+        vec3 worldview   = normalize(viewpos.xyz);
+
+        // 
+        vec3 normal     = sampleNormal(vtexcoord, DEFAULT_SCENE);
+        vec3 tangent    = sampleTangent(vtexcoord, DEFAULT_SCENE);
+        vec2 lmcoord    = sampleLmcoord(vtexcoord, DEFAULT_SCENE);
+        vec2 texcoord   = sampleTexcoord(vtexcoord, DEFAULT_SCENE);
+        vec2 indicator  = sampleIndicator(vtexcoord, DEFAULT_SCENE);
         vec3 bitangent  = normalize(cross(tangent, normal));
-        float reflcoef  = 1.f - abs(dot(normalize(screenpos), normal));
-        
-        // 
-        vec3 sceneColor = sampleLayer(colortex0, vtexcoord, DEFAULT_SCENE).rgb;
-        vec3 waterColor = sampleLayer(colortex0, vtexcoord, WATER_SCENE).rgb;
-        vec3 transpColor = sampleLayer(colortex0, vtexcoord, TRANSLUCENT_SCENE).rgb;
-        float filterRefl = sampleLayer(colortex0, vtexcoord, WATER_SCENE).w;
 
         // 
-        if (groundDepth.x >= translucentDepth.x && sceneDepth.x <= translucentDepth.x && translucentDepth.x <= 0.9999f) {
-            sceneColor = mix(sceneColor, transpColor, sampleLayer(colortex0, vtexcoord, TRANSLUCENT_SCENE).w);
-        }
+        mat3x3 tbn = mat3x3(normalize(tangent.xyz), normalize(cross(tangent.xyz, normal.xyz)), normalize(normal.xyz));
+        vec3 tview = normalize(worldview.xyz*tbn);
 
-        // mix with ground 
-        if (groundDepth.x >= sceneDepth.x && sceneDepth.x <= 0.9999f) {
-            sceneColor = mix(sceneColor, waterColor, filterRefl);
-        }
+        // 
+        vec3 world_bitangent = mat3(gbufferModelViewInverse) * bitangent;
+        vec3 world_tangent = mat3(gbufferModelViewInverse) * tangent;
+        vec3 world_normal = mat3(gbufferModelViewInverse) * normal;
+        float reflcoef  = 1.f - abs(dot(worldview, normal));
 
-        //
-        if (groundDepth.x >= translucentDepth.x && sceneDepth.x >= translucentDepth.x && translucentDepth.x <= 0.9999f) {
-            sceneColor = mix(sceneColor, transpColor, sampleLayer(colortex0, vtexcoord, TRANSLUCENT_SCENE).w);
-        }
+        // 
+        if (indicator.x == 1.f) {
+            bool debugIndicator = false;
+            vec2 modTx = texcoord;//searchIntersection(colortexA, texcoord.xy, tview, debugIndicator).xy;
+            viewpos.xyz -= normal.xyz * (1.f-texture(colortexA, texcoord.xy).w) * depthHeight;
 
-        //sceneColor = sampleLayer(colortex7, vtexcoord, WATER_SCENE).xyz * 0.01f;
+            // 
+            //sceneColor *= pow(texture(colortex9, modTx, 0).rgb, 2.2f.xxx);
+            sceneColor *= pow(texture(colortex8, lmcoord, 0).rgb, 2.2f.xxx);
+        };
 
-        gl_FragData[0] = vec4(sceneColor, 1.f);
+        //sceneColor = texture(colortex9, vtexcoord, 0).rgb;
+
+        gl_FragData[0] = vec4(sceneColor, sampleLayer(colortex0, vtexcoord, DEFAULT_SCENE).w);
     } else {
-        discard;
+        gl_FragData[0] = sampleLayer(colortex0, vtexcoord, layerId);
+
+        //discard;
     }
 
-    
+
 }

@@ -1,6 +1,8 @@
-# Simplex 2 (alpha)
+# Arch Age shaders (alpha)
 
-How made Optifine, so I made those reflections. I will no support that piece of sheat such as Optifine. 
+### Where planar reflections?
+
+I resolved to decline planar reflections due layers 5 and 6. I decided, that more priority has performance, faster POM, nicer screen space reflections. 
 
 ### Blend states mod NO more required
 
@@ -13,5 +15,3 @@ Layers is limited up to 4, but you can use it in official Optifine.
 ## Required mods
 
 - **IMPORTANT!** [OptiFine 1.16.5_HD_U_G7_pre6](https://optifine.net/downloads) 
-- [Optifabric](https://minecraft.curseforge.com/projects/optifabric) with **Fabric**
-- **Optifine Fabric mod!** [Layered framebuffer extension](https://github.com/helixd2s/OptifineLayeredMod) **Important if you NOT using split screen**

@@ -36,7 +36,9 @@ uniform int worldTime;
 const int GL_EXP2 = 2049;
 const int GL_LINEAR = 9729;
 const int GL_EXP = 2048;
-const int countInstances = 2;
+
+// disabled planar reflections
+const int countInstances = 1;
 
 // 
 #ifdef VERTEX_SHADER
@@ -73,82 +75,7 @@ uniform int fogMode;
 uniform float fogDensity;
 uniform vec3 fogColor; 
 
-uniform ivec2 atlasSize;
 
-const vec2 texSize = vec2(128.f, 128.f);
-
-vec4 sampleInbound(in sampler2D depthtex, in vec2 unit, in vec2 atlasOffset) {
-    vec2 gridSize = vec2(atlasSize)/texSize;
-    vec2 spaces = fract(unit)/gridSize + atlasOffset;
-    return texture(depthtex, spaces);
-}
-
-float depthHeight = 0.25f;
-float normalDepth = 0.25f;
-const int linearSteps = 24;
-const int binarySteps = 8;
-
-// TODO: DEFERRED MAPPING!
-// Needs layered framebuffers support and early fragment testing! (up to 100% can be faster)
-vec3 searchIntersection(in sampler2D depthtex, in vec2 texcoord, in vec3 view, inout bool debugIndicator) {
-    vec3 dir = vec3(-view.xy/view.z, -1.f);
-
-    vec2 gridSize = vec2(atlasSize)/texSize;
-    vec2 altasOffset = floor(texcoord*gridSize)/gridSize;
-    vec2 unit = fract(texcoord*gridSize);
-
-    float stepSize = 1.f/float(linearSteps)*depthHeight;
-    vec3 coord = vec3(unit, 0.f);
-    
-    vec3 bcoord = coord;
-    vec3 pcoord = coord;
-    float t = 0.f;
-    
-    float bestHeight = 0.f;
-
-    for (int I=0;I<2;I++) {
-        const int steps = I == 0 ? linearSteps : binarySteps;
-
-        // try to search needed height
-        vec3 best = coord;
-        for (int r=0;r<steps;r++) 
-        {
-            float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w)*depthHeight;
-            if (coord.z <= height) {
-                best = coord, bestHeight = height;
-                if (abs(height - coord.z) < 0.001f) { break; };
-                coord -= dir*stepSize;
-                stepSize *= 0.5f;
-            }
-            coord += dir*stepSize;
-        }
-        coord = best;
-
-        t = 0.f;
-        {   // normal based planar intersection correction (but needs to check depth correct)
-            // getting correct normal and height
-            float amplifier = depthHeight/normalDepth;
-            float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w)*depthHeight;
-            vec3 normal = normalize(sampleInbound(depthtex, coord.xy, altasOffset).xyz*2.f-1.f);
-            normal = normalize(vec3(normal.xy*amplifier, normal.z));
-
-            //float d = 0.f;
-            float det = dot(vec3(dir.xy, dir.z), normal);
-            t = dot(vec3(coord.xy, height) - coord, normal) / det;
-            vec3 pre = coord + dir * t;
-            
-            float preHeight = -(1.f-sampleInbound(depthtex, pre.xy, altasOffset).w)*depthHeight;
-            if (pre.z >= -depthHeight && abs(det) >= 0.0001f && abs(preHeight-pre.z) < 0.001f) { bestHeight = preHeight; } else { t = 0.f; };
-        }
-        coord += dir*t;
-
-        // already got best result
-        bcoord = coord;
-        if ( abs(bestHeight-coord.z) < 0.001f ) { break; };
-    }
-
-    return vec3(altasOffset+fract(bcoord.xy)/gridSize, bcoord.z);
-}
 
 void main() {
 #ifdef VERTEX_SHADER
@@ -185,8 +112,9 @@ void main() {
 #if defined(WEATHER) || defined(HAND) || (defined(BASIC) && !defined(SKY)) || defined(CLOUDS)
         layerId_ = TRANSLUCENT_SCENE;
 #else
-        if (mc_Entity.x == 3.f) { layerId_ = TRANSLUCENT_SCENE; };
         if (mc_Entity.x == 2.f) { layerId_ = WATER_SCENE; };
+        if (mc_Entity.x == 3.f) { layerId_ = TRANSLUCENT_SCENE; };
+        if (mc_Entity.x == 4.f) { layerId_ = CUTOUT_SCENE; };
 #endif
     };
     if (instanceId == 1) { layerId_ = REFLECTION_SCENE; };
@@ -250,6 +178,7 @@ void main() {
     vec4 f_planar = vec4(0.f.xxxx);
     vec2 f_lmcoord = vec2(0.f.xx);
     vec2 f_texcoord = vec2(0.f.xx);
+    vec2 f_indicator = vec2(0.f.xx);
     float f_depth = 2.f;
 
 #ifndef SKY
@@ -266,14 +195,7 @@ void main() {
     #ifdef SOLID //
         mat3x3 tbn = mat3x3(normalize(tangent.xyz), (instanceId == 1 ? -1.f : 1.f)*normalize(cross(tangent.xyz, normal.xyz)), normalize(normal.xyz));
         vec3 tview = normalize(worldview.xyz*tbn);
-#ifdef BLOCKS
-        
-        vec2 modTx = searchIntersection(normals, texcoord.xy, tview, debugIndicator).xy;
-        viewpos.xyz -= normal.xyz * (1.f-texture(normals, texcoord.xy).w) * depthHeight;
-        sslrpos = gbufferProjection * viewpos; sslrpos /= sslrpos.w;
-#else
         vec2 modTx = texcoord.xy;
-#endif
 
         //vec3 mnormal = normalize(texture(normals, modTx).xyz*2.f-1.f);
         //mnormal = normalize(vec3(mnormal.xy, mnormal.z/normalDepth));
@@ -291,6 +213,13 @@ void main() {
         f_texcoord = modTx.st;
         f_lmcoord = lmcoord.xy;
         f_depth = sslrpos.z;
+
+#if defined(BLOCKS) && !defined(TRANSLUCENT) && !defined(CUTOUT)
+        if (entity.x != 2.f && entity.x != 3.f && entity.x != 4.f) {
+            f_color = color * texture(tex, modTx.st);
+            f_indicator = vec2(1.f, 0.f);
+        }
+#endif
 
         f_normal.xyz = dot(f_normal.xyz.xyz, worldview.xyz) >= 0.f ? -f_normal.xyz : f_normal.xyz;
 
@@ -411,7 +340,7 @@ void main() {
         // 
         gl_FragData[0] = f_color;
         gl_FragData[1] = vec4(pack2x3(mat2x3(f_normal.xyz, f_tangent.xyz)), enabled);
-        gl_FragData[2] = vec4(pack3x2(mat3x2(f_texcoord.xy, f_lmcoord.xy, vec2(0.f.xx))), enabled);
+        gl_FragData[2] = vec4(pack3x2(mat3x2(f_texcoord.xy, f_lmcoord.xy, f_indicator)), enabled);
         gl_FragData[3] = f_planar;
         gl_FragDepth = f_depth*0.5f+0.5f;
     };

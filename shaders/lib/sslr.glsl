@@ -26,7 +26,7 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
     const vec2 hpm = 0.5f/(txs.xy);
 
     
-
+/*
     if (sceneId == REFLECTION_SCENE) {
         {   // needs reflect the reflection ray
             vec4 WSR = gbufferModelViewInverse * vec4(cameraSpaceDirection, 0.f);
@@ -48,6 +48,7 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
             cameraSpaceOrigin = divW(ModelSpaceToCameraSpace(WSP));
         };
     };
+*/
 
     // 
     vec4 screenSpaceOrigin = CameraSpaceToScreenSpace(vec4(cameraSpaceOrigin,1.f));
@@ -107,7 +108,7 @@ vec4 EfficientRM(in vec3 cameraSpaceOrigin, in vec3 cameraSpaceDirection, in int
             // check ray deviation 
             vec3 cameraNormal = GetNormalRM(screenSpaceOrigin.xy, sceneId);
             float gdepth = GetDepthRM(screenSpaceOrigin.xy, sceneId);
-            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && abs(gdepth-screenSpaceOrigin.z)<(filterDepth ? 0.0002f : 0.001f) && (filterDepth?gdepth<=0.9999f:true) && 
+            if (dot(cameraNormal,cameraSpaceDirection)<=0.f && abs(gdepth-screenSpaceOrigin.z)<(filterDepth ? 0.0002f : 0.001f) && 
             screenSpaceOrigin.x >= -1.f && screenSpaceOrigin.x < 1.f && screenSpaceOrigin.y >= -1.f && screenSpaceOrigin.y < 1.f) {
                 finalOrigin.xyz = screenSpaceOrigin.xyz, finalOrigin.w = 1.f; break; // 
             }

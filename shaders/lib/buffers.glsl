@@ -5,6 +5,11 @@
     const int colortex7Format = RGBA32F;
 
     const bool colortex7Clear = false;
+
+    const int colortex8Format = RGBA8;
+    const int colortex9Format = RGBA8;
+    const int colortexAFormat = RGBA8;
+    const int colortexBFormat = RGBA8;
 */
 
 uniform float viewWidth;
@@ -21,7 +26,7 @@ uniform samplerTyped colortex6;
 uniform samplerTyped colortex7;
 
 // lightmap
-uniform samplerTyped colortex8;
+//uniform samplerTyped colortex8;
 
 vec3 sampleRaw(in samplerTyped samplr, in vec2 texcoord, in int sceneId) {
     #ifndef USE_SPLIT_SCREEN
@@ -56,4 +61,8 @@ vec2 sampleTexcoord(in vec2 texcoord, in int sceneId) {
 
 vec2 sampleLmcoord(in vec2 texcoord, in int sceneId) {
     return unpack3x2(sampleRaw(colortex2, texcoord, sceneId))[1];
+}
+
+vec2 sampleIndicator(in vec2 texcoord, in int sceneId) {
+    return unpack3x2(sampleRaw(colortex2, texcoord, sceneId))[2];
 }

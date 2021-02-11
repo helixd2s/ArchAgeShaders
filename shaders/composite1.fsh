@@ -27,25 +27,23 @@ uniform mat4 shadowModelView;
 
 /*DRAWBUFFERS:0*/
 
-
+uniform sampler2D colortex8; // lightmap
 
 vec4 makeScreenSpaceEffect(in vec3 screenpos, in vec3 direction, inout vec4 sslrpos, inout bool usedplanar) {
     // nested SSLR from main scene (fallback)
-    sslrpos = EfficientRM(screenpos.xyz, direction.xyz, DEFAULT_SCENE, true);
+    sslrpos = EfficientRM(screenpos.xyz, direction.xyz, DEFAULT_SCENE, false);
     vec3 reflColor = sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, DEFAULT_SCENE).rgb; float hasResult = 1.f;
     if (sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, DEFAULT_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) {
-        sslrpos = EfficientRM(screenpos.xyz, direction.xyz, REFLECTION_SCENE, false);
-        reflColor = sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, REFLECTION_SCENE).rgb;
-        usedplanar = true;
-        if (sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { 
+    //    sslrpos = EfficientRM(screenpos.xyz, direction.xyz, REFLECTION_SCENE, false);
+    //    reflColor = sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, REFLECTION_SCENE).rgb;
+    //    usedplanar = true;
+    //    if (sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { 
             //reflColor = skyColor;
             hasResult = 0.f;
-        }
+    //    }
     }
     return vec4(reflColor, hasResult);
 }
-
-
 
 // THIS IS WATER SHADER
 void main() {
@@ -95,7 +93,9 @@ void main() {
 
         gl_FragData[0] = vec4(sceneColor, filterRefl > 0.999f ? (0.2f + reflcoef*0.4f) : 0.f);
     } else {
-        discard;
+        gl_FragData[0] = sampleLayer(colortex0, vtexcoord, layerId);
+
+        //discard;
     }
 
 
