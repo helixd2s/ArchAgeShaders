@@ -28,70 +28,135 @@ uniform mat4 shadowModelView;
 /*DRAWBUFFERS:0*/
 
 uniform sampler2D colortex8; // lightmap
+uniform sampler2D colortex9; // diffuse
+uniform sampler2D colortexA; // normals
+uniform sampler2D colortexB; // specular
 
-vec4 makeScreenSpaceEffect(in vec3 screenpos, in vec3 direction, inout vec4 sslrpos, inout bool usedplanar) {
-    // nested SSLR from main scene (fallback)
-    sslrpos = EfficientRM(screenpos.xyz, direction.xyz, DEFAULT_SCENE, false);
-    vec3 reflColor = sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, DEFAULT_SCENE).rgb; float hasResult = 1.f;
-    if (sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, DEFAULT_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) {
-    //    sslrpos = EfficientRM(screenpos.xyz, direction.xyz, REFLECTION_SCENE, false);
-    //    reflColor = sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, REFLECTION_SCENE).rgb;
-    //    usedplanar = true;
-    //    if (sampleLayer(colortex0, sslrpos.xy*0.5f+0.5f, REFLECTION_SCENE).w < 0.0001f || dot(reflColor, 1.f.xxx) < 0.0001f || sslrpos.w <= 0.0001f) { 
-            //reflColor = skyColor;
-            hasResult = 0.f;
-    //    }
-    }
-    return vec4(reflColor, hasResult);
+uniform ivec2 atlasSize;
+
+const vec2 texSize = vec2(128.f, 128.f);
+
+vec4 sampleInbound(in sampler2D depthtex, in vec2 unit, in vec2 atlasOffset) {
+    vec2 gridSize = textureSize(depthtex, 0).xy/texSize;
+    vec2 spaces = fract(unit)/gridSize + atlasOffset;
+    return texture(depthtex, spaces);
 }
+
+float depthHeight = 0.25f;
+float normalDepth = 0.25f;
+const int linearSteps = 24;
+const int binarySteps = 8;
+
+// TODO: DEFERRED MAPPING!
+// Needs layered framebuffers support and early fragment testing! (up to 100% can be faster)
+vec3 searchIntersection(in sampler2D depthtex, in vec2 texcoord, in vec3 view, inout bool debugIndicator) {
+    vec3 dir = vec3(-view.xy/view.z, -1.f);
+
+    vec2 gridSize = textureSize(depthtex, 0).xy/texSize;
+    vec2 altasOffset = floor(texcoord*gridSize)/gridSize;
+    vec2 unit = fract(texcoord*gridSize);
+
+    float stepSize = 1.f/float(linearSteps)*depthHeight;
+    vec3 coord = vec3(unit, 0.f);
+    
+    vec3 bcoord = coord;
+    vec3 pcoord = coord;
+    float t = 0.f;
+    
+    float bestHeight = 0.f;
+
+    for (int I=0;I<2;I++) {
+        const int steps = I == 0 ? linearSteps : binarySteps;
+
+        // try to search needed height
+        vec3 best = coord;
+        for (int r=0;r<steps;r++) 
+        {
+            float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w)*depthHeight;
+            if (coord.z <= height) {
+                best = coord, bestHeight = height;
+                if (abs(height - coord.z) < 0.001f) { break; };
+                coord -= dir*stepSize;
+                stepSize *= 0.5f;
+            }
+            coord += dir*stepSize;
+        }
+        coord = best;
+
+        t = 0.f;
+        {   // normal based planar intersection correction (but needs to check depth correct)
+            // getting correct normal and height
+            float amplifier = depthHeight/normalDepth;
+            float height = -(1.f-sampleInbound(depthtex, coord.xy, altasOffset).w)*depthHeight;
+            vec3 normal = normalize(sampleInbound(depthtex, coord.xy, altasOffset).xyz*2.f-1.f);
+            normal = normalize(vec3(normal.xy*amplifier, normal.z));
+
+            //float d = 0.f;
+            float det = dot(vec3(dir.xy, dir.z), normal);
+            t = dot(vec3(coord.xy, height) - coord, normal) / det;
+            vec3 pre = coord + dir * t;
+            
+            float preHeight = -(1.f-sampleInbound(depthtex, pre.xy, altasOffset).w)*depthHeight;
+            if (pre.z >= -depthHeight && abs(det) >= 0.0001f && abs(preHeight-pre.z) < 0.001f) { bestHeight = preHeight; } else { t = 0.f; };
+        }
+        coord += dir*t;
+
+        // already got best result
+        bcoord = coord;
+        if ( abs(bestHeight-coord.z) < 0.001f ) { break; };
+    }
+
+    return vec3(altasOffset+fract(bcoord.xy)/gridSize, bcoord.z);
+}
+
+
 
 // THIS IS WATER SHADER
 void main() {
 
-    if (layerId == WATER_SCENE) {
+    if (layerId == DEFAULT_SCENE) {
         //ivec2  texcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
         //ivec2 rtexcoord = ivec2(vtexcoord * vec2(viewWidth, viewHeight));
 
         // 
-        vec3 groundDepth = sampleLayer(depthtex0, vtexcoord, DEFAULT_SCENE).xxx;
-        vec3 sceneDepth = sampleLayer(depthtex0, vtexcoord, WATER_SCENE).xxx;
-        vec3 screenpos 	= getScreenpos(sceneDepth.x, vtexcoord);
-        vec3 worldpos   = toWorldpos(screenpos);
+        vec3 sceneColor  = sampleLayer(colortex0, vtexcoord, DEFAULT_SCENE).rgb;
+        float sceneDepth = sampleLayer(depthtex0, vtexcoord, DEFAULT_SCENE).x;
+        vec4 viewpos     = vec4(getScreenpos(sceneDepth.x, vtexcoord), 1.f);
+        vec3 worldpos    = toWorldpos(viewpos.xyz);
+        vec3 worldview   = normalize(viewpos.xyz);
 
         // 
-        vec3 normal     = sampleNormal(vtexcoord, WATER_SCENE);
-        vec3 tangent    = sampleTangent(vtexcoord, WATER_SCENE);
-        vec2 lmcoord    = sampleLmcoord(vtexcoord, WATER_SCENE);
+        vec3 normal     = sampleNormal(vtexcoord, DEFAULT_SCENE);
+        vec3 tangent    = sampleTangent(vtexcoord, DEFAULT_SCENE);
+        vec2 lmcoord    = sampleLmcoord(vtexcoord, DEFAULT_SCENE);
+        vec2 texcoord   = sampleTexcoord(vtexcoord, DEFAULT_SCENE);
+        vec2 indicator  = sampleIndicator(vtexcoord, DEFAULT_SCENE);
         vec3 bitangent  = normalize(cross(tangent, normal));
+
+        // 
+        mat3x3 tbn = mat3x3(normalize(tangent.xyz), normalize(cross(tangent.xyz, normal.xyz)), normalize(normal.xyz));
+        vec3 tview = normalize(worldview.xyz*tbn);
 
         // 
         vec3 world_bitangent = mat3(gbufferModelViewInverse) * bitangent;
         vec3 world_tangent = mat3(gbufferModelViewInverse) * tangent;
         vec3 world_normal = mat3(gbufferModelViewInverse) * normal;
-        float reflcoef  = 1.f - abs(dot(normalize(screenpos), normal));
+        float reflcoef  = 1.f - abs(dot(worldview, normal));
 
         // 
-        vec3 sceneColor = vec3(0.f.xxx);//sampleLayer(colortex0, vtexcoord, DEFAULT_SCENE).rgb;
-        vec3 waterColor = sampleLayer(colortex0, vtexcoord, WATER_SCENE).rgb;
-        float filterRefl = sampleLayer(colortex0, vtexcoord, WATER_SCENE).w > 0.f ? 1.f : 0.f;
-        if ( sceneDepth.x > 0.9999f ) { filterRefl = 0.f; };
+        if (indicator.x == 1.f) {
+            bool debugIndicator = false;
+            vec2 modTx = texcoord;//searchIntersection(colortexA, texcoord.xy, tview, debugIndicator).xy;
+            viewpos.xyz -= normal.xyz * (1.f-texture(colortexA, texcoord.xy).w) * depthHeight;
 
-        // 
-        if (filterRefl > 0.999f) {
-            vec3 ntexture = normalize(mix(get_water_normal(worldpos, 1.f, world_normal, world_tangent, world_bitangent).xzy, vec3(0.f,0.f,1.f), 0.96f));
-            normal = mat3(tangent, bitangent, normal) * ntexture;
-        }
+            // 
+            //sceneColor *= pow(texture(colortex9, modTx, 0).rgb, 2.2f.xxx);
+            sceneColor *= pow(texture(colortex8, lmcoord, 0).rgb, 2.2f.xxx);
+        };
 
-        // make reflection as water color
-        if (filterRefl > 0.999f) {
-            bool usedplanar = false;
-            vec4 sslrpos = vec4(0.f.xxxx);
-            vec4 effect = makeScreenSpaceEffect(screenpos, normalize(reflect(normalize(screenpos.xyz), normal)), sslrpos, usedplanar);
-            sceneColor = mix(pow(texture(colortex8, vec2(0.f,lmcoord.y), 0).xyz, 2.2f.xxx)*pow(skyColor, 2.2f.xxx), effect.xyz, effect.w);
-            // for skyColor required lightmap
-        }
+        //sceneColor = texture(colortex9, vtexcoord, 0).rgb;
 
-        gl_FragData[0] = vec4(sceneColor, filterRefl > 0.999f ? (0.2f + reflcoef*0.4f) : 0.f);
+        gl_FragData[0] = vec4(sceneColor, sampleLayer(colortex0, vtexcoord, DEFAULT_SCENE).w);
     } else {
         gl_FragData[0] = sampleLayer(colortex0, vtexcoord, layerId);
 

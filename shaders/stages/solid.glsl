@@ -105,7 +105,11 @@ void main() {
 #ifdef TRANSLUCENT
     int layerId_ = TRANSLUCENT_SCENE;
 #else
+#if defined(CUTOUT) || defined(ENTITIES)
+    int layerId_ = CUTOUT_SCENE;
+#else
     int layerId_ = DEFAULT_SCENE;
+#endif
 #endif
 
     if (instanceId == 0) {
@@ -115,6 +119,7 @@ void main() {
         if (mc_Entity.x == 2.f) { layerId_ = WATER_SCENE; };
         if (mc_Entity.x == 3.f) { layerId_ = TRANSLUCENT_SCENE; };
         if (mc_Entity.x == 4.f) { layerId_ = CUTOUT_SCENE; };
+
 #endif
     };
     if (instanceId == 1) { layerId_ = REFLECTION_SCENE; };
