@@ -2,7 +2,7 @@
 
 ### Where planar reflections?
 
-I resolved to decline planar reflections due layers 5 and 6. I decided, that more priority has performance, faster POM, nicer screen space reflections. 
+I decided to decline planar reflections due layers 5 and 6. I decided, that more priority has performance, faster POM, nicer screen space reflections. 
 
 ### Blend states mod NO more required
 
