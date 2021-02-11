@@ -14,4 +14,4 @@ Layers is limited up to 4, but you can use it in official Optifine.
 
 ## Required mods
 
-- **IMPORTANT!** [OptiFine 1.16.5_HD_U_G7_pre6](https://optifine.net/downloads) 
+- **IMPORTANT!** [OptiFine 1.16.5_HD_U_G7_pre8](https://optifine.net/downloads) 
